@@ -1,5 +1,4 @@
-import math
-from operator import length_hint
+import numpy as np
 
 class Message():
 	def __init__(self, varName, message):
