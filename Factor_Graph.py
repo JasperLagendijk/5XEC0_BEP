@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.linalg import norm
 
 class Message():
 	def __init__(self, varName, message):
@@ -24,7 +25,7 @@ class Node():
 		else:
 			self.edges.append(edge)
 			self.edgeNames.append(edge.name)
-			self.messages = np.concatenate((self.messages, np.zeros((1, edge.nSymbols))))
+			self.messages = np.concatenate((self.messages, -1 * np.ones((1, edge.nSymbols))))
 			
 	def printEdges(self):
 			for obj in self.edges:
@@ -56,7 +57,7 @@ class Edge():
 		else:
 			self.nodes.append(node)
 			self.nodeNames.append(node.name)
-			self.messages = np.concatenate((self.messages, np.zeros((1, self.nSymbols))))
+			self.messages = np.concatenate((self.messages, -1 * np.ones((1, self.nSymbols))))
 			node.addEdge(self)
 
 	
@@ -136,23 +137,20 @@ def generateMessage(sender, recip):
 		if ( len(sender.edges) > 1): # Not a leaf node -> recursivity needed
 			print("This is not a leaf node")
 			#tempMessages = -1*np.ones((1, recip.nSymbols))
-			tempOut = sender.function
+			tempOut = sender.function.copy()
 			for obj in sender.edges:
 				if (obj != recip):
 					generateMessage(obj, sender)
-					print(obj.name, obj.messages)
 					tempMessage = obj.messages[obj.nodeNames.index(sender.name)]
 					a =  [1] *len(sender.function.shape)
 					a[sender.edgeNames.index(obj.name)] = -1
 					tempOut *= tempMessage.reshape(tuple(a))
-			
 			tempTup = list(range( len(sender.function.shape)))
 			tempTup.pop(sender.edgeNames.index(recip.name))
-
+			
 			messageOut = np.sum(tempOut, tuple(tempTup))
 			sender.messages[sender.edgeNames.index(recip.name)] = messageOut
 			
-			print("Marginal: ", messageOut)
 		elif (len(sender.edges) == 1):
 			print("This is a leaf node") #Leaf node -> no recursivity needed
 			if (sender.function != "Empty"):
@@ -168,12 +166,33 @@ def generateMessage(sender, recip):
 
 
 def findMessage(sender, recip):
+	if (isinstance(sender, Edge)):
+		if (np.sum(sender.messages[sender.nodeNames.index(recip.name)]) < 0): #No message present, generate new message
+			generateMessage(sender, recip)
+			
+		if 	(len(sender.messages.shape) > 1):
+			return sender.messages[sender.nodeNames.index(recip.name)]
+		else:
+			return sender.messages
+	elif (isinstance(sender, Node)):
+		if (np.sum(sender.messages[sender.edgeNames.index(recip.name)]) < 0): #No message present, generate new message
+			generateMessage(sender, recip)
+		if 	(len(sender.messages.shape) > 1):
+			return sender.messages[sender.edgeNames.index(recip.name)]
+		else:
+			return sender.messages
+		
+	else:
+		print("ERROR: Incorrect input")
+
+
+def findMarginal(edge, node):
+	a = findMessage(edge, node)
+	b = findMessage(node, edge)
+	print(a, b)
+	marginal = np.divide(a*b, np.sum(a*b))
 	
-
-
-
-
-
+	return marginal
 
 E = createEdges(1, 2, "E")
 B = createEdges(1, 2, "B")
@@ -196,6 +215,9 @@ g.createFunction(np.array([[0.001, 0.7],[0.1, 0.9]]))
 fE.createFunction([0.99, 0.01])
 fB.createFunction([0.99, 0.01])
 #fX.createFunction([0.89, 0.11])
-generateMessage(E, fE)
-generateMessage(B, fB)
-g.printEdges()
+marginal_E = findMarginal(E, fE)
+marginal_B = findMarginal(B, fB)
+
+
+print(marginal_E)
+print(marginal_B)
