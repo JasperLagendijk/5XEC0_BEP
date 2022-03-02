@@ -14,7 +14,7 @@ class Node():
 		else:
 			self.name = nodeName
 		self.edges = []
-		self.messages = []
+		self.messages = np.empty((0, 2))
 		self.function = "Empty"
 		self.edgeNames = []
 		
@@ -24,14 +24,15 @@ class Node():
 		else:
 			self.edges.append(edge)
 			self.edgeNames.append(edge.name)
-			self.messages.append("Empty")
-		
+			self.messages = np.concatenate((self.messages, np.zeros((1, edge.nSymbols))))
+			
 	def printEdges(self):
 			for obj in self.edges:
-				print(obj.varName)
+				print("Edge: ", obj.name, "Message: ", self.messages[self.edgeNames.index(obj.name)])
+
 		
-	def createFunction(self, probList): #Not finished -> just for now
-		self.function = probList
+	def createFunction(self, probArray): #Not finished -> just for now
+		self.function = probArray
 		pass
 		
 
@@ -46,7 +47,7 @@ class Edge():
 		else:
 			self.name = edgeName
 		self.nodes = []
-		self.messages = []
+		self.messages = np.empty((0, nSymbols))
 		self.nodeNames = []
 		
 	def addNode(self, node):
@@ -55,7 +56,7 @@ class Edge():
 		else:
 			self.nodes.append(node)
 			self.nodeNames.append(node.name)
-			self.messages.append("Empty")
+			self.messages = np.concatenate((self.messages, np.zeros((1, self.nSymbols))))
 			node.addEdge(self)
 
 	
@@ -95,22 +96,32 @@ def generateMessage(sender, recip):
 	if (isinstance(sender, Edge)):
 		if( len(sender.nodes) > 1 ): # Not a half-edge -> recursivity needed
 			print("This is not a half-edge")
-			tempMessages = []
+			tempMessages = -1*np.ones((1, sender.nSymbols))
 			for obj in sender.nodes: 
 				if (obj != recip): #Only enter other connected nodes
 					#1. Check if message is already generated
 					#2. If not -> generate message for this node
 					generateMessage(obj, sender)
-					tempMessages.append(obj.messages[obj.edgeNames.index(sender.name)])
-					
+					if (len(obj.messages.shape) == 2): #2dimensional array -> multiple messages
+						if(tempMessages[0, 0] != -1):
+							tempMessages = np.vstack((tempMessages, obj.messages[obj.edgeNames.index(sender.name), :]))
+						else:
+							tempMessages[0, 0] = obj.messages[obj.edgeNames.index(sender.name), 0]
+							tempMessages[0, 1] = obj.messages[obj.edgeNames.index(sender.name), 1]
+					elif(len(obj.messages.shape) == 1):
+						if(tempMessages[0, 0] != -1):
+							tempMessages = np.vstack((tempMessages, obj.messages))
+						else:
+							tempMessages[0, 0] = obj.messages[0]
+							tempMessages[0, 1] = obj.messages[1]
 					
 			#3. Loop through for all nodes -> sending message is product of all other messages
-			messageOut = [1 for i in range(len(tempMessages[0]))]
-			for i in tempMessages:
-				for num, x in enumerate(messageOut):
-					messageOut[num] *= i[num]
+			if(tempMessages.shape[0] > 1):			
+				messageOut = np.array([np.prod(tempMessages[0, :]), np.prod(tempMessages[0, :])])
+			else:
+				messageOut = np.array([tempMessages[0, 0], tempMessages[0, 1]])
 			
-			sender.messages[sender.nodeNames.index(recip.name)] = messageOut
+			sender.messages[sender.nodeNames.index(recip.name)] = messageOut	
 		elif(len(sender.nodes) == 1): # Half-edge -> no recursivity needed
 			#1 Generate Message, should be 1 for half edges
 			print("This is a half edge")
@@ -120,45 +131,44 @@ def generateMessage(sender, recip):
 			print("ERROR: Unconnected edge")
 		return
 	
+	
 	elif (isinstance(sender, Node)):
 		if ( len(sender.edges) > 1): # Not a leaf node -> recursivity needed
 			print("This is not a leaf node")
-			tempMessages = []
+			#tempMessages = -1*np.ones((1, recip.nSymbols))
+			tempOut = sender.function
 			for obj in sender.edges:
 				if (obj != recip):
 					generateMessage(obj, sender)
-					tempMessages.append(obj.messages[obj.nodeNames.index(sender.name)])
-					#1 Check if message is already generated
-					#2 If not -> generate message
-				
-			print("Incoming Messages: ", tempMessages)
-			print("Sending message to: ", recip.name)
-			for i, num in enumerate(tempMessages):
-				if (sender.edgeNames.index(recip.name) == 0): #Sending messages from 1srt index
-					pass
-					
-				else: #Loop through 0th index
-					pass
+					print(obj.name, obj.messages)
+					tempMessage = obj.messages[obj.nodeNames.index(sender.name)]
+					a =  [1] *len(sender.function.shape)
+					a[sender.edgeNames.index(obj.name)] = -1
+					tempOut *= tempMessage.reshape(tuple(a))
+			
+			tempTup = list(range( len(sender.function.shape)))
+			tempTup.pop(sender.edgeNames.index(recip.name))
+
+			messageOut = np.sum(tempOut, tuple(tempTup))
+			sender.messages[sender.edgeNames.index(recip.name)] = messageOut
+			
+			print("Marginal: ", messageOut)
 		elif (len(sender.edges) == 1):
 			print("This is a leaf node") #Leaf node -> no recursivity needed
 			if (sender.function != "Empty"):
-				#sender.message = Message(recip.name, sender.function)
-				sender.messages = [sender.function]
-				#print("SUCCES: Message created: ", sender.messages)
+				sender.messages = np.array(sender.function)
 			else:
 				print("ERROR: Node without function")
+				
 		else:
 			print("ERROR: Unconnected node")
 		return
 	else:
 		print("ERROR: Incorrect input")
 
-def findLeafNodes(startEdge):
-	#Find leaf nodes without functions/distributions
-	pass
 
-
-
+def findMessage(sender, recip):
+	
 
 
 
@@ -179,14 +189,13 @@ E.addNode(fE)
 B.addNode(fB)
 E.addNode(g)
 B.addNode(g)
-B.addNode(fX)
+#B.addNode(fX)
 
-g.createFunction([[0.001, 0.7],[0.1, 0.9]])
+g.createFunction(np.array([[0.001, 0.7],[0.1, 0.9]]))
 
 fE.createFunction([0.99, 0.01])
 fB.createFunction([0.99, 0.01])
-fX.createFunction([0.89, 0.11])
-#generateMessage(E, fE)
-generateMessage(g, E)
-#generateMessage(T, fE)
-#generateMessage(C[0], fB)
+#fX.createFunction([0.89, 0.11])
+generateMessage(E, fE)
+generateMessage(B, fB)
+g.printEdges()
