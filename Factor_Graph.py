@@ -101,8 +101,20 @@ def generateMessage(sender, recip):
 			for obj in sender.nodes: 
 				if (obj != recip): #Only enter other connected nodes
 					#1. Check if message is already generated
-					#2. If not -> generate message for this node
-					generateMessage(obj, sender)
+					if(sum(obj.messages[obj.edgeNames.index(sender.name)]) >= 0):
+						prevMessage = obj.messages[obj.edgeNames.index(sender.name)]
+						generateMessage(obj, sender)
+					
+					else:
+						obj.messages[obj.edgeNames.index(sender.name)] = 0.5*np.ones(obj.messages[obj.edgeNames.index(sender.name)].shape)
+						generateMessage(obj, sender)
+						prevMessage = obj.messages[obj.edgeNames.index(sender.name)]
+					
+					#3. Compare previous message with newly generated message
+					delta = prevMessage - obj.messages[obj.edgeNames.index(sender.name)]
+					
+					print("Delta:", delta)
+					
 					if (len(obj.messages.shape) == 2): #2dimensional array -> multiple messages
 						if(tempMessages[0, 0] != -1):
 							tempMessages = np.vstack((tempMessages, obj.messages[obj.edgeNames.index(sender.name), :]))
@@ -137,14 +149,20 @@ def generateMessage(sender, recip):
 		if ( len(sender.edges) > 1): # Not a leaf node -> recursivity needed
 			print("This is not a leaf node")
 			#tempMessages = -1*np.ones((1, recip.nSymbols))
-			tempOut = sender.function.copy()
+			if ( not isinstance(sender.function, str)):
+				tempOut = sender.function.copy()
+			else:
+				print("ERROR: Node without function")
+				quit()
+				
 			for obj in sender.edges:
-				if (obj != recip):
+				if (obj != recip): #Loop through all incomming messages, multiply all messages with outgoing function
 					generateMessage(obj, sender)
 					tempMessage = obj.messages[obj.nodeNames.index(sender.name)]
 					a =  [1] *len(sender.function.shape)
 					a[sender.edgeNames.index(obj.name)] = -1
 					tempOut *= tempMessage.reshape(tuple(a))
+			
 			tempTup = list(range( len(sender.function.shape)))
 			tempTup.pop(sender.edgeNames.index(recip.name))
 			
@@ -153,7 +171,7 @@ def generateMessage(sender, recip):
 			
 		elif (len(sender.edges) == 1):
 			print("This is a leaf node") #Leaf node -> no recursivity needed
-			if (sender.function != "Empty"):
+			if (not isinstance(sender.function, str)):
 				sender.messages = np.array(sender.function)
 			else:
 				print("ERROR: Node without function")
@@ -194,30 +212,35 @@ def findMarginal(edge, node):
 	
 	return marginal
 
-E = createEdges(1, 2, "E")
-B = createEdges(1, 2, "B")
+
+f = createNodes(4)
 C = createEdges(4, 2, "C")
+B = createEdges(1, 2, "B")
+X = createEdges(1, 2)
 fB = createNodes(1, "fB")
-fE = createNodes(1, "fE")
-g = createNodes(1, "g")
-T = createEdges(1, 2, "C")
+eq = createNodes(1, "eq")
 
-fX = createNodes(1, "fX")
 
-E.addNode(fE)
+
+for i, obj in enumerate(C):
+	obj.addNode(f[i])
+	obj.addNode(eq)
+	
 B.addNode(fB)
-E.addNode(g)
-B.addNode(g)
-#B.addNode(fX)
+B.addNode(eq)
+X.addNode(f[0])
+X.addNode(f[1])
 
-g.createFunction(np.array([[0.001, 0.7],[0.1, 0.9]]))
+f[0].createFunction(np.array(([0.1, 0.5], [0.3, 0.4])))
+f[1].createFunction(np.array(([0.1, 0.5], [0.6, 0.3])))
+f[2].createFunction(np.array([0.9, 0.5]))
+f[3].createFunction(np.array([0.9, 0.5]))
+fB.createFunction(np.array([0.5, 0.5]))
+eq.createFunction(np.ones((2,2,2,2,2)))
 
-fE.createFunction([0.99, 0.01])
-fB.createFunction([0.99, 0.01])
-#fX.createFunction([0.89, 0.11])
-marginal_E = findMarginal(E, fE)
+
+
 marginal_B = findMarginal(B, fB)
 
-
-print(marginal_E)
+#print(marginal_E)
 print(marginal_B)
