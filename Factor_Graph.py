@@ -1,6 +1,8 @@
 import numpy as np
 from numpy.linalg import norm
 
+
+
 class Message():
 	def __init__(self, varName, message):
 		self.varName = varName #List of incomming messages, 2-dimensional array -> x: distribution of vars, y: connected node
@@ -32,10 +34,19 @@ class Node():
 				print("Edge: ", obj.name, "Message: ", self.messages[self.edgeNames.index(obj.name)])
 
 		
-	def createFunction(self, probArray): #Not finished -> just for now
-		self.function = probArray
-		pass
-		
+	def createFunction(self, probArray=np.zeros([2,2]), nodeType="f"): #Not finished -> just for now
+		if (nodeType == "f"): #Regular function, array given directly
+			self.function = probArray
+		elif (nodeType == "+"): #parity check node
+			pass
+		elif (nodeType == "="): #Equality node
+			l = list([])
+			for obj in self.edges:
+				l.append(obj.nSymbols)
+			tempArray = np.zeros(np.product(l))
+			tempArray[0] = 1
+			tempArray[-1] = 1
+			self.function = tempArray.reshape(tuple(l))
 
 
 	
@@ -113,7 +124,7 @@ def generateMessage(sender, recip):
 					#3. Compare previous message with newly generated message
 					delta = prevMessage - obj.messages[obj.edgeNames.index(sender.name)]
 					
-					print("Delta:", delta)
+					#print("Delta:", delta)
 					
 					if (len(obj.messages.shape) == 2): #2dimensional array -> multiple messages
 						if(tempMessages[0, 0] != -1):
@@ -154,7 +165,7 @@ def generateMessage(sender, recip):
 			else:
 				print("ERROR: Node without function")
 				quit()
-				
+			
 			for obj in sender.edges:
 				if (obj != recip): #Loop through all incomming messages, multiply all messages with outgoing function
 					generateMessage(obj, sender)
@@ -162,12 +173,15 @@ def generateMessage(sender, recip):
 					a =  [1] *len(sender.function.shape)
 					a[sender.edgeNames.index(obj.name)] = -1
 					tempOut *= tempMessage.reshape(tuple(a))
+					#print(tempOut)
 			
 			tempTup = list(range( len(sender.function.shape)))
 			tempTup.pop(sender.edgeNames.index(recip.name))
 			
 			messageOut = np.sum(tempOut, tuple(tempTup))
+			#print(messageOut)
 			sender.messages[sender.edgeNames.index(recip.name)] = messageOut
+			#print("Outgoing:", tempOut, messageOut)
 			
 		elif (len(sender.edges) == 1):
 			print("This is a leaf node") #Leaf node -> no recursivity needed
@@ -216,30 +230,38 @@ def findMarginal(edge, node):
 f = createNodes(4)
 C = createEdges(4, 2, "C")
 B = createEdges(1, 2, "B")
-X = createEdges(1, 2)
+#X = createEdges(1, 2)
 fB = createNodes(1, "fB")
 eq = createNodes(1, "eq")
 
+
+B.addNode(fB)
+B.addNode(eq)
 
 
 for i, obj in enumerate(C):
 	obj.addNode(f[i])
 	obj.addNode(eq)
 	
-B.addNode(fB)
-B.addNode(eq)
-X.addNode(f[0])
-X.addNode(f[1])
 
-f[0].createFunction(np.array(([0.1, 0.5], [0.3, 0.4])))
-f[1].createFunction(np.array(([0.1, 0.5], [0.6, 0.3])))
+#X.addNode(f[0])
+#X.addNode(f[1])
+
+f[0].createFunction(np.array(([0.1, 0.5])))
+f[1].createFunction(np.array(([0.1, 0.5])))
 f[2].createFunction(np.array([0.9, 0.5]))
 f[3].createFunction(np.array([0.9, 0.5]))
 fB.createFunction(np.array([0.5, 0.5]))
-eq.createFunction(np.ones((2,2,2,2,2)))
+#eq.createFunction(np.array([[[0.5, 0.4],[0.2, 0.8]],[[0.4, 0.2],[0.7, 0.9]]]))
+eq.createFunction(nodeType="=")
 
+a = eq.function.copy()
 
+for x in f:
+	a *= x.function
 
+#print(a.shape)
+#print("Equalization function:",eq.function)
 marginal_B = findMarginal(B, fB)
 
 #print(marginal_E)
