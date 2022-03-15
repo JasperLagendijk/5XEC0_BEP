@@ -37,8 +37,17 @@ class Node():
 	def createFunction(self, probArray=np.zeros([2,2]), nodeType="f"): #Not finished -> just for now
 		if (nodeType == "f"): #Regular function, array given directly
 			self.function = probArray
-		elif (nodeType == "+"): #parity check node
-			pass
+		
+		elif (nodeType == "+"): #Parity-Check node
+			l = list([])
+			for obj in self.edges:
+				l.append(obj.nSymbols)
+			tempArray = np.zeros(np.product(l))
+			for i, x in enumerate(tempArray):
+				if (not (bin(i).count("1") % 2)):
+					tempArray[i] = 1	
+			self.function = tempArray.reshape(tuple(l))
+		
 		elif (nodeType == "="): #Equality node
 			l = list([])
 			for obj in self.edges:
@@ -253,7 +262,7 @@ f[2].createFunction(np.array([0.9, 0.5]))
 f[3].createFunction(np.array([0.9, 0.5]))
 fB.createFunction(np.array([0.5, 0.5]))
 #eq.createFunction(np.array([[[0.5, 0.4],[0.2, 0.8]],[[0.4, 0.2],[0.7, 0.9]]]))
-eq.createFunction(nodeType="=")
+eq.createFunction(nodeType="+")
 
 a = eq.function.copy()
 
