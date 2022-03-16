@@ -2,7 +2,7 @@ import Factor_Graph as FG
 import Codes as C
 import numpy as np
 
-
+C.LDPC_parity(20, 8, 3)
 
 f = FG.createNodes(3)
 C = FG.createEdges(4, 2, "C")
