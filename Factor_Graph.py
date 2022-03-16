@@ -121,19 +121,10 @@ def generateMessage(sender, recip):
 			for obj in sender.nodes: 
 				if (obj != recip): #Only enter other connected nodes
 					#1. Check if message is already generated
-					if(sum(obj.messages[obj.edgeNames.index(sender.name)]) >= 0):
-						prevMessage = obj.messages[obj.edgeNames.index(sender.name)]
+					if(sum(obj.messages[obj.edgeNames.index(sender.name)]) < 0):
 						generateMessage(obj, sender)
 					
-					else:
-						obj.messages[obj.edgeNames.index(sender.name)] = 0.5*np.ones(obj.messages[obj.edgeNames.index(sender.name)].shape)
-						generateMessage(obj, sender)
-						prevMessage = obj.messages[obj.edgeNames.index(sender.name)]
-					
-					#3. Compare previous message with newly generated message
-					delta = prevMessage - obj.messages[obj.edgeNames.index(sender.name)]
-					
-					#print("Delta:", delta)
+					print(obj.messages[obj.edgeNames.index(sender.name)])
 					
 					if (len(obj.messages.shape) == 2): #2dimensional array -> multiple messages
 						if(tempMessages[0, 0] != -1):
@@ -177,7 +168,22 @@ def generateMessage(sender, recip):
 			
 			for obj in sender.edges:
 				if (obj != recip): #Loop through all incomming messages, multiply all messages with outgoing function
-					generateMessage(obj, sender)
+					
+					while (True):
+						if (sum(obj.messages[obj.nodeNames.index(sender.name)]) < 0): #Check if a message has already been generated -> if not generate message
+							for temp in sender.edges:
+								if (obj != recip):
+									sender.messages[sender.edgeNames.index(temp.name)] *= -0.20
+							print(obj.name)		
+							generateMessage(obj, sender)
+						else: #Message has been generated, save current message, calculate new message -> compare
+							print("Tittletattle")
+							prevMessage = sender.messages[obj.nodeNames.index(sender.name)]
+							generateMessage(obj, sender)
+							print(abs(sum(prevMessage - sender.messages[obj.nodeNames.index(sender.name)])))
+							if(abs(sum(prevMessage - sender.messages[obj.nodeNames.index(sender.name)])) < 0.01):
+								break
+					
 					tempMessage = obj.messages[obj.nodeNames.index(sender.name)]
 					a =  [1] *len(sender.function.shape)
 					a[sender.edgeNames.index(obj.name)] = -1
@@ -192,6 +198,9 @@ def generateMessage(sender, recip):
 			sender.messages[sender.edgeNames.index(recip.name)] = messageOut
 			#print("Outgoing:", tempOut, messageOut)
 			
+			
+			
+						
 		elif (len(sender.edges) == 1):
 			print("This is a leaf node") #Leaf node -> no recursivity needed
 			if (not isinstance(sender.function, str)):
@@ -236,42 +245,3 @@ def findMarginal(edge, node):
 	return marginal
 
 
-f = createNodes(4)
-C = createEdges(4, 2, "C")
-B = createEdges(1, 2, "B")
-#X = createEdges(1, 2)
-fB = createNodes(1, "fB")
-eq = createNodes(1, "eq")
-
-
-B.addNode(fB)
-B.addNode(eq)
-
-
-for i, obj in enumerate(C):
-	obj.addNode(f[i])
-	obj.addNode(eq)
-	
-
-#X.addNode(f[0])
-#X.addNode(f[1])
-
-f[0].createFunction(np.array(([0.1, 0.5])))
-f[1].createFunction(np.array(([0.1, 0.5])))
-f[2].createFunction(np.array([0.9, 0.5]))
-f[3].createFunction(np.array([0.9, 0.5]))
-fB.createFunction(np.array([0.5, 0.5]))
-#eq.createFunction(np.array([[[0.5, 0.4],[0.2, 0.8]],[[0.4, 0.2],[0.7, 0.9]]]))
-eq.createFunction(nodeType="+")
-
-a = eq.function.copy()
-
-for x in f:
-	a *= x.function
-
-#print(a.shape)
-#print("Equalization function:",eq.function)
-marginal_B = findMarginal(B, fB)
-
-#print(marginal_E)
-print(marginal_B)
