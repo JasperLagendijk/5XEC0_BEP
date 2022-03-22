@@ -43,15 +43,51 @@ def LDPC_parity(n, k, j=3):
 	return matrix
 	
 def generate_LDPC(b, c):
-	C = FG.createEdges(c)
-	B = FG.createEdges(b)
-	equality = FG.createNodes(c)
+	C = FG.createEdges(c, edgeName="C")
+	B = FG.createEdges(b, edgeName="B")
+	equality = FG.createNodes(c, nodeName="=")
+	check = FG.createNodes(c-b, nodeName="+")
+	out = FG.createNodes(b, nodeName="b")
+	inp = FG.createNodes(c, nodeName="c")
 	
 	for i, obj in enumerate(C):
-		C[i].addNodes(equality[i])
-	
+		C[i].addNode(equality[i])
+		C[i].addNode(inp[i])
+		inp[i].createFunction(np.array([0.5, 0.5]))
+	for i in range(b):
+		B[i].addNode(equality[i])
+		B[i].addNode(out[i])
+		out[i].createFunction(np.array([0.5, 0.5]))
 	parity = LDPC_parity(c, b)
+	print(parity)
 
+	interconnect = FG.createEdges(int(np.sum(parity)))
+	
+	rows = parity.shape[0]
+	columns = parity.shape[1]
+	a = 0
+		
+	for i in range(rows):
+		for j in range(columns):
+			if (parity[i, j] == 1): #Connect equality node with parity check
+				interconnect[a].addNode(check[i])
+				interconnect[a].addNode(equality[j])
+				a += 1
+	
+	for i in range(rows):
+		check[i].createFunction(nodeType="+")
+	
+	for i in range(columns):
+		equality[i].createFunction(nodeType="=")
+	
+	temp = []
+	
+	for i in range(b):
+		temp.append(FG.findMarginal(B[i], out[i]))
+	
+	print(temp)
+	return temp
+	
 def generate_RA():
 	pass
 	

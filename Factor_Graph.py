@@ -114,6 +114,7 @@ def createNodes(nNodes, nodeName="f", startVal=1):
 
 
 def generateMessage(sender, recip):
+	print(sender.name)
 	if (isinstance(sender, Edge)):
 		if( len(sender.nodes) > 1 ): # Not a half-edge -> recursivity needed
 			print("This is not a half-edge")
@@ -121,10 +122,10 @@ def generateMessage(sender, recip):
 			for obj in sender.nodes: 
 				if (obj != recip): #Only enter other connected nodes
 					#1. Check if message is already generated
-					if(sum(obj.messages[obj.edgeNames.index(sender.name)]) < 0):
+					if(np.sum(obj.messages[obj.edgeNames.index(sender.name)]) < 0):
 						generateMessage(obj, sender)
 					
-					print(obj.messages[obj.edgeNames.index(sender.name)])
+					#print(obj.messages[obj.edgeNames.index(sender.name)])
 					
 					if (len(obj.messages.shape) == 2): #2dimensional array -> multiple messages
 						if(tempMessages[0, 0] != -1):
@@ -174,13 +175,13 @@ def generateMessage(sender, recip):
 							for temp in sender.edges:
 								if (obj != recip):
 									sender.messages[sender.edgeNames.index(temp.name)] *= -0.20
-							print(obj.name)		
+							#print(obj.name)		
 							generateMessage(obj, sender)
 						else: #Message has been generated, save current message, calculate new message -> compare
 							print("Tittletattle")
 							prevMessage = sender.messages[obj.nodeNames.index(sender.name)]
 							generateMessage(obj, sender)
-							print(abs(sum(prevMessage - sender.messages[obj.nodeNames.index(sender.name)])))
+							#print(abs(sum(prevMessage - sender.messages[obj.nodeNames.index(sender.name)])))
 							if(abs(sum(prevMessage - sender.messages[obj.nodeNames.index(sender.name)])) < 0.01):
 								break
 					

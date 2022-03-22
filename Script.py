@@ -2,8 +2,8 @@ import Factor_Graph as FG
 import Codes as C
 import numpy as np
 
-C.LDPC_parity(20, 8, 3)
-
+C.generate_LDPC(4,8)
+'''
 f = FG.createNodes(3)
 C = FG.createEdges(4, 2, "C")
 eq = FG.createNodes(1, "eq")
@@ -40,4 +40,4 @@ for x in f:
 marginal = FG.findMarginal(C[0], f[2])
 
 #print(marginal_E)
-print(marginal)
+print(marginal)'''
