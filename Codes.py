@@ -53,7 +53,7 @@ def generate_LDPC(b, c):
 	for i, obj in enumerate(C):
 		C[i].addNode(equality[i])
 		C[i].addNode(inp[i])
-		inp[i].createFunction(np.array([0.5, 0.5]))
+		inp[i].createFunction(np.array([0.55, 0.45]))
 	for i in range(b):
 		B[i].addNode(equality[i])
 		B[i].addNode(out[i])
@@ -76,17 +76,78 @@ def generate_LDPC(b, c):
 	
 	for i in range(rows):
 		check[i].createFunction(nodeType="+")
-	
+
+
 	for i in range(columns):
 		equality[i].createFunction(nodeType="=")
 	
 	temp = []
 	
-	for i in range(b):
-		temp.append(FG.findMarginal(B[i], out[i]))
+	#Decoding/encoding LDPC code:
+	#1 Set messages outgoing messages from checknodes to [0.5,0.5]
+	for i, obj in enumerate(check):
+		for j, x in enumerate(check[i].messages):
+			check[i].messages[j] = np.array([0.5, 0.5])
 	
+	for k in range(2):
+	#2 Calculate upward Messages
+		a = 0
+		#1 Calculate outgoing messages from equality nodes into interconnect
+		for i, x in enumerate(equality):
+			#1 Take incoming message from interconnect
+			for j, obj in enumerate(equality[i].edges):
+				equality[i].edges[j].messages[obj.nodeNames.index(equality[i].name)] = obj.nodes[not obj.nodeNames.index(equality[i].name)].messages[obj.nodes[not obj.nodeNames.index(equality[i].name)].edgeNames.index(obj.name)]
+				
+			#2 Take incoming messages from C and B
+			FG.generateMessage(C[i], equality[i])
+			
+			if(i < c-b):
+				FG.generateMessage(B[i], equality[i])
+
+				
+			#3 Calculate outgoing messages towards edges
+			for outgoing in equality[i].edges: #For each outgoing message
+				tempOut = equality[i].function.copy()
+				for incoming in equality[i].edges: #Loop through all incoming messages, multiply all messages with outgoing function
+					if (incoming != outgoing): 
+						tempMessage = incoming.messages[incoming.nodeNames.index(equality[i].name)]
+						a =  [1] *len(equality[i].function.shape)
+						a[equality[i].edgeNames.index(incoming.name)] = -1
+						tempOut *= tempMessage.reshape(tuple(a))
+					#print(tempOut)
+			
+				tempTup = list(range( len(equality[i].function.shape)))
+				tempTup.pop(equality[i].edgeNames.index(outgoing.name))
+				messageOut = np.sum(tempOut, tuple(tempTup))	
+				equality[i].messages[equality[i].edgeNames.index(outgoing.name)] = messageOut	
+
+	#3 Calculate downward Messages
+		for i, x in enumerate(check):
+			#1 Take incomming messages from interconnect
+			for j, obj in enumerate(check[i].edges):
+				check[i].edges[j].messages[obj.nodeNames.index(check[i].name)] = obj.nodes[not obj.nodeNames.index(check[i].name)].messages[obj.nodes[not obj.nodeNames.index(check[i].name)].edgeNames.index(obj.name)]
+				
+			#2 Calculate outgoing messages towards edges
+			for outgoing in check[i].edges: #For each outgoing message
+				tempOut = check[i].function.copy()
+				for incoming in check[i].edges: #Loop through all incoming messages, multiply all messages with outgoing function
+					if (incoming != outgoing): 
+						tempMessage = incoming.messages[incoming.nodeNames.index(check[i].name)]
+						a =  [1] *len(check[i].function.shape)
+						a[check[i].edgeNames.index(incoming.name)] = -1
+						tempOut *= tempMessage.reshape(tuple(a))
+					#print(tempOut)
+			
+				tempTup = list(range( len(check[i].function.shape)))
+				tempTup.pop(check[i].edgeNames.index(outgoing.name))
+				messageOut = np.sum(tempOut, tuple(tempTup))	
+				check[i].messages[check[i].edgeNames.index(outgoing.name)] = messageOut	
+				print("Test", messageOut)
+	#4 After looping calculate outoing messages to B
+
+	for i, obj in enumerate(B):
+		temp.append(FG.findMarginal(B[i], out[i]))			
 	print(temp)
-	return temp
 	
 def generate_RA():
 	pass

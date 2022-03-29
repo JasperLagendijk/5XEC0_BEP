@@ -83,7 +83,7 @@ class Edge():
 	
 	def printNodes(self):
 		for obj in self.nodes:
-			print(obj.name)
+			print("Node: ", obj.name, "Message: ", self.messages[self.nodeNames.index(obj.name)])
 
 
 
@@ -113,8 +113,7 @@ def createNodes(nNodes, nodeName="f", startVal=1):
 
 
 
-def generateMessage(sender, recip):
-	print(sender.name)
+def generateMessage(sender, recip): #Generates message from acyclic, forest factor graphs
 	if (isinstance(sender, Edge)):
 		if( len(sender.nodes) > 1 ): # Not a half-edge -> recursivity needed
 			print("This is not a half-edge")
@@ -122,7 +121,8 @@ def generateMessage(sender, recip):
 			for obj in sender.nodes: 
 				if (obj != recip): #Only enter other connected nodes
 					#1. Check if message is already generated
-					if(np.sum(obj.messages[obj.edgeNames.index(sender.name)]) < 0):
+					
+					if (np.sum(obj.messages[obj.edgeNames.index(sender.name)]) < 0):
 						generateMessage(obj, sender)
 					
 					#print(obj.messages[obj.edgeNames.index(sender.name)])
@@ -170,21 +170,8 @@ def generateMessage(sender, recip):
 			for obj in sender.edges:
 				if (obj != recip): #Loop through all incomming messages, multiply all messages with outgoing function
 					
-					while (True):
-						if (sum(obj.messages[obj.nodeNames.index(sender.name)]) < 0): #Check if a message has already been generated -> if not generate message
-							for temp in sender.edges:
-								if (obj != recip):
-									sender.messages[sender.edgeNames.index(temp.name)] *= -0.20
-							#print(obj.name)		
-							generateMessage(obj, sender)
-						else: #Message has been generated, save current message, calculate new message -> compare
-							print("Tittletattle")
-							prevMessage = sender.messages[obj.nodeNames.index(sender.name)]
-							generateMessage(obj, sender)
-							#print(abs(sum(prevMessage - sender.messages[obj.nodeNames.index(sender.name)])))
-							if(abs(sum(prevMessage - sender.messages[obj.nodeNames.index(sender.name)])) < 0.01):
-								break
-					
+					#if (np.sum(obj.messages[obj.nodeNames.index(sender.name)]) < 0): #No message present, generate new message
+					generateMessage(obj, sender)
 					tempMessage = obj.messages[obj.nodeNames.index(sender.name)]
 					a =  [1] *len(sender.function.shape)
 					a[sender.edgeNames.index(obj.name)] = -1
@@ -216,9 +203,14 @@ def generateMessage(sender, recip):
 		print("ERROR: Incorrect input")
 
 
-def findMessage(sender, recip):
+def findMessage(sender, recip, l=[]):
 	if (isinstance(sender, Edge)):
-		if (np.sum(sender.messages[sender.nodeNames.index(recip.name)]) < 0): #No message present, generate new message
+		#Step 1: Determine if the connected part has a message or not
+		#Step 2: Loop through all connected Nodes without a message trying to find forest graph parts and cyclic graph parts
+			# For each forest graph part generate incomming message using generateMessage
+			# For each cyclic grahp part generate incomming message using generateMessage_cyclic
+		
+		if (np.sum(sender.messages[sender.nodeNames.index(recip.name)]) < 0): #Step 1
 			generateMessage(sender, recip)
 			
 		if 	(len(sender.messages.shape) > 1):
