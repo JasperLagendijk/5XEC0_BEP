@@ -3,7 +3,7 @@ import numpy as np
 import random
 import math
 
-def LDPC_parity(n, k, j=3):
+def LDPC_parity(k, n, j=3):
 	matrix = np.zeros((n-k, n))
 	
 	for x in range(n): #Loop through all columns 
@@ -42,7 +42,7 @@ def LDPC_parity(n, k, j=3):
 						l.pop(l.index(r))
 	return matrix
 	
-def generate_LDPC(b, c):
+def generate_LDPC(b, c, parity):
 	#Create necessary nodes and edges
 	C = FG.createEdges(c, edgeName="C")
 	B = FG.createEdges(b, edgeName="B")
@@ -60,8 +60,6 @@ def generate_LDPC(b, c):
 		B[i].addNode(equality[i])
 		B[i].addNode(out[i])
 		out[i].createFunction(np.array([0.5, 0.5]))
-	parity = LDPC_parity(c, b)
-	print(parity)
 
 	interconnect = FG.createEdges(int(np.sum(parity)))
 	
@@ -84,9 +82,14 @@ def generate_LDPC(b, c):
 	for i in range(columns):
 		equality[i].createFunction(nodeType="=")
 	
+	return B, C, inp, out, check, equality
 
 	
-	#Decoding/encoding LDPC code:
+	
+	
+
+def calculate_LDPC(B, C, inp, out, check, equality, b, c, option="encode"): #Decoding/encoding LDPC code:
+	
 	#1 Set messages outgoing messages from checknodes to [0.5,0.5]
 	for i, obj in enumerate(check):
 		for j, x in enumerate(check[i].messages):
@@ -174,6 +177,8 @@ def generate_LDPC(b, c):
 		finalMessage.append(np.argmax(obj))
 		
 	print(finalMessage)
+
+
 def generate_RA():
 	pass
 	
