@@ -116,7 +116,6 @@ def createNodes(nNodes, nodeName="f", startVal=1):
 def generateMessage(sender, recip): #Generates message from acyclic, forest factor graphs
 	if (isinstance(sender, Edge)):
 		if( len(sender.nodes) > 1 ): # Not a half-edge -> recursivity needed
-			print("This is not a half-edge")
 			tempMessages = -1*np.ones((1, sender.nSymbols))
 			for obj in sender.nodes: 
 				if (obj != recip): #Only enter other connected nodes
@@ -124,8 +123,6 @@ def generateMessage(sender, recip): #Generates message from acyclic, forest fact
 					
 					if (np.sum(obj.messages[obj.edgeNames.index(sender.name)]) < 0):
 						generateMessage(obj, sender)
-					
-					#print(obj.messages[obj.edgeNames.index(sender.name)])
 					
 					if (len(obj.messages.shape) == 2): #2dimensional array -> multiple messages
 						if(tempMessages[0, 0] != -1):
@@ -149,7 +146,6 @@ def generateMessage(sender, recip): #Generates message from acyclic, forest fact
 			sender.messages[sender.nodeNames.index(recip.name)] = messageOut	
 		elif(len(sender.nodes) == 1): # Half-edge -> no recursivity needed
 			#1 Generate Message, should be 1 for half edges
-			print("This is a half edge")
 			sender.message = [1]
 				
 		else: #Something went wrong, no message can be generated
@@ -159,8 +155,6 @@ def generateMessage(sender, recip): #Generates message from acyclic, forest fact
 	
 	elif (isinstance(sender, Node)):
 		if ( len(sender.edges) > 1): # Not a leaf node -> recursivity needed
-			print("This is not a leaf node")
-			#tempMessages = -1*np.ones((1, recip.nSymbols))
 			if ( not isinstance(sender.function, str)):
 				tempOut = sender.function.copy()
 			else:
@@ -169,28 +163,22 @@ def generateMessage(sender, recip): #Generates message from acyclic, forest fact
 			
 			for obj in sender.edges:
 				if (obj != recip): #Loop through all incomming messages, multiply all messages with outgoing function
-					
-					#if (np.sum(obj.messages[obj.nodeNames.index(sender.name)]) < 0): #No message present, generate new message
 					generateMessage(obj, sender)
 					tempMessage = obj.messages[obj.nodeNames.index(sender.name)]
 					a =  [1] *len(sender.function.shape)
 					a[sender.edgeNames.index(obj.name)] = -1
 					tempOut *= tempMessage.reshape(tuple(a))
-					#print(tempOut)
 			
 			tempTup = list(range( len(sender.function.shape)))
 			tempTup.pop(sender.edgeNames.index(recip.name))
-			
 			messageOut = np.sum(tempOut, tuple(tempTup))
-			#print(messageOut)
 			sender.messages[sender.edgeNames.index(recip.name)] = messageOut
-			#print("Outgoing:", tempOut, messageOut)
 			
 			
 			
 						
 		elif (len(sender.edges) == 1):
-			print("This is a leaf node") #Leaf node -> no recursivity needed
+			#print("This is a leaf node") #Leaf node -> no recursivity needed
 			if (not isinstance(sender.function, str)):
 				sender.messages = np.array(sender.function)
 			else:
@@ -205,12 +193,7 @@ def generateMessage(sender, recip): #Generates message from acyclic, forest fact
 
 def findMessage(sender, recip, l=[]):
 	if (isinstance(sender, Edge)):
-		#Step 1: Determine if the connected part has a message or not
-		#Step 2: Loop through all connected Nodes without a message trying to find forest graph parts and cyclic graph parts
-			# For each forest graph part generate incomming message using generateMessage
-			# For each cyclic grahp part generate incomming message using generateMessage_cyclic
-		
-		if (np.sum(sender.messages[sender.nodeNames.index(recip.name)]) < 0): #Step 1
+		if (np.sum(sender.messages[sender.nodeNames.index(recip.name)]) < 0): #No new message present, generate new message
 			generateMessage(sender, recip)
 			
 		if 	(len(sender.messages.shape) > 1):
@@ -232,7 +215,6 @@ def findMessage(sender, recip, l=[]):
 def findMarginal(edge, node):
 	a = findMessage(edge, node)
 	b = findMessage(node, edge)
-	print(a, b)
 	marginal = np.divide(a*b, np.sum(a*b))
 	
 	return marginal

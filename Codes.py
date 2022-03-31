@@ -43,6 +43,7 @@ def LDPC_parity(n, k, j=3):
 	return matrix
 	
 def generate_LDPC(b, c):
+	#Create necessary nodes and edges
 	C = FG.createEdges(c, edgeName="C")
 	B = FG.createEdges(b, edgeName="B")
 	equality = FG.createNodes(c, nodeName="=")
@@ -50,10 +51,11 @@ def generate_LDPC(b, c):
 	out = FG.createNodes(b, nodeName="b")
 	inp = FG.createNodes(c, nodeName="c")
 	
+	#attach edges and nodes to eachother
 	for i, obj in enumerate(C):
 		C[i].addNode(equality[i])
 		C[i].addNode(inp[i])
-		inp[i].createFunction(np.array([0.55, 0.45]))
+		inp[i].createFunction(np.array([0.75, 0.25]))
 	for i in range(b):
 		B[i].addNode(equality[i])
 		B[i].addNode(out[i])
@@ -74,6 +76,7 @@ def generate_LDPC(b, c):
 				interconnect[a].addNode(equality[j])
 				a += 1
 	
+	#Adding functions to check and equality nodes
 	for i in range(rows):
 		check[i].createFunction(nodeType="+")
 
@@ -81,7 +84,7 @@ def generate_LDPC(b, c):
 	for i in range(columns):
 		equality[i].createFunction(nodeType="=")
 	
-	temp = []
+
 	
 	#Decoding/encoding LDPC code:
 	#1 Set messages outgoing messages from checknodes to [0.5,0.5]
@@ -89,9 +92,13 @@ def generate_LDPC(b, c):
 		for j, x in enumerate(check[i].messages):
 			check[i].messages[j] = np.array([0.5, 0.5])
 	
-	for k in range(2):
+	prevMessages_B = np.zeros(b)
+	
+	test = 0
+	for k in range(1000):
 	#2 Calculate upward Messages
 		a = 0
+		boolean = True
 		#1 Calculate outgoing messages from equality nodes into interconnect
 		for i, x in enumerate(equality):
 			#1 Take incoming message from interconnect
@@ -114,12 +121,15 @@ def generate_LDPC(b, c):
 						a =  [1] *len(equality[i].function.shape)
 						a[equality[i].edgeNames.index(incoming.name)] = -1
 						tempOut *= tempMessage.reshape(tuple(a))
-					#print(tempOut)
 			
 				tempTup = list(range( len(equality[i].function.shape)))
 				tempTup.pop(equality[i].edgeNames.index(outgoing.name))
 				messageOut = np.sum(tempOut, tuple(tempTup))	
+				#Normalize messages:
+				messageOut = messageOut/(np.sum(messageOut))
 				equality[i].messages[equality[i].edgeNames.index(outgoing.name)] = messageOut	
+
+	
 
 	#3 Calculate downward Messages
 		for i, x in enumerate(check):
@@ -136,19 +146,34 @@ def generate_LDPC(b, c):
 						a =  [1] *len(check[i].function.shape)
 						a[check[i].edgeNames.index(incoming.name)] = -1
 						tempOut *= tempMessage.reshape(tuple(a))
-					#print(tempOut)
 			
 				tempTup = list(range( len(check[i].function.shape)))
 				tempTup.pop(check[i].edgeNames.index(outgoing.name))
-				messageOut = np.sum(tempOut, tuple(tempTup))	
+				messageOut = np.sum(tempOut, tuple(tempTup))
+				messageOut = messageOut/(np.sum(messageOut))
 				check[i].messages[check[i].edgeNames.index(outgoing.name)] = messageOut	
-				print("Test", messageOut)
-	#4 After looping calculate outoing messages to B
-
+	
+	
+	#4 See if the probabilities of outgoing messages have changed (significantly)
+		for i, obj in enumerate(B):
+			x  = equality[i].messages[equality[i].edgeNames.index(B[i].name), 0]
+			if (abs(prevMessages_B[i]-x) > 0.001):
+				boolean = False
+			prevMessages_B[i] = x
+			
+		if (boolean):
+			break
+			
+	#5 After looping calculate outoing messages to B
+	temp = []
 	for i, obj in enumerate(B):
 		temp.append(FG.findMarginal(B[i], out[i]))			
 	print(temp)
-	
+	finalMessage = []
+	for obj in temp:
+		finalMessage.append(np.argmax(obj))
+		
+	print(finalMessage)
 def generate_RA():
 	pass
 	
