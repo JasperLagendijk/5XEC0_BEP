@@ -13,16 +13,6 @@ class LDPC_Code():
 		self.equality = equality
 	
 
-
-
-
-
-
-
-
-
-
-
 def LDPC_parity(k, n, j=3):
 	matrix = np.zeros((n-k, n))
 	
@@ -75,7 +65,7 @@ def generate_LDPC(b, c, parity):
 	for i, obj in enumerate(C):
 		C[i].addNode(equality[i])
 		C[i].addNode(inp[i])
-		inp[i].createFunction(np.array([0.75, 0.25]))
+		inp[i].createFunction(np.array([0.5, 0.5]))
 	for i in range(b):
 		B[i].addNode(equality[i])
 		B[i].addNode(out[i])
@@ -111,17 +101,35 @@ def generate_LDPC(b, c, parity):
 	
 	
 
-def calculate_LDPC(LDPC, b, c, option="d"): #Decoding/encoding LDPC code:
+def calculate_LDPC(LDPC, b, c, prob, base=10, option="d", domain="p"): #Decoding/encoding LDPC code:
+	
+	#0 Initialize probabilities
+		#1 Transform to probability domain
+		m = []
+	if(domain == "l"):
+		for p in prob:
+			x = pow(base, p)
+			b = 1/(x+1)
+			a = b-1
+			m.append(a, b)	
+	if(domain == "p"):
+		for a in prob:
+			m.append(np.array(a, 1-a))
+			
+			
+	if (option == "e"): #Encoding option is chosen, probabilities for incoming bit are enabled
+		prevMessages = np.zeros(c)
+	if (option == "d"):	
+		prevMessages = np.zeros(b)
+	
+	
 	
 	#1 Set messages outgoing messages from checknodes to [0.5,0.5]
 	for i, obj in enumerate(LDPC.check):
 		for j, x in enumerate(LDPC.check[i].messages):
 			LDPC.check[i].messages[j] = np.array([0.5, 0.5])
 	
-	if (option == "e"):
-		prevMessages = np.zeros(c)
-	if (option == "d"):	
-		prevMessages = np.zeros(b)
+	
 	
 	
 	test = 0
