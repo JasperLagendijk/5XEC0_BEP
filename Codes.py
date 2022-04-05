@@ -3,6 +3,26 @@ import numpy as np
 import random
 import math
 
+class LDPC_Code():
+	def __init__(self, B, C, inp, out, check, equality):
+		self.B = B
+		self.C = C
+		self.inp = inp
+		self.out = out
+		self.check = check
+		self.equality = equality
+	
+
+
+
+
+
+
+
+
+
+
+
 def LDPC_parity(k, n, j=3):
 	matrix = np.zeros((n-k, n))
 	
@@ -82,20 +102,27 @@ def generate_LDPC(b, c, parity):
 	for i in range(columns):
 		equality[i].createFunction(nodeType="=")
 	
-	return B, C, inp, out, check, equality
+	
+	LDPC = LDPC_Code(B, C, inp, out, check, equality)
+	
+	return LDPC
 
 	
 	
 	
 
-def calculate_LDPC(B, C, inp, out, check, equality, b, c, option="encode"): #Decoding/encoding LDPC code:
+def calculate_LDPC(LDPC, b, c, option="d"): #Decoding/encoding LDPC code:
 	
 	#1 Set messages outgoing messages from checknodes to [0.5,0.5]
-	for i, obj in enumerate(check):
-		for j, x in enumerate(check[i].messages):
-			check[i].messages[j] = np.array([0.5, 0.5])
+	for i, obj in enumerate(LDPC.check):
+		for j, x in enumerate(LDPC.check[i].messages):
+			LDPC.check[i].messages[j] = np.array([0.5, 0.5])
 	
-	prevMessages_B = np.zeros(b)
+	if (option == "e"):
+		prevMessages = np.zeros(c)
+	if (option == "d"):	
+		prevMessages = np.zeros(b)
+	
 	
 	test = 0
 	for k in range(1000):
@@ -103,74 +130,82 @@ def calculate_LDPC(B, C, inp, out, check, equality, b, c, option="encode"): #Dec
 		a = 0
 		boolean = True
 		#1 Calculate outgoing messages from equality nodes into interconnect
-		for i, x in enumerate(equality):
+		for i, x in enumerate(LDPC.equality):
 			#1 Take incoming message from interconnect
-			for j, obj in enumerate(equality[i].edges):
-				equality[i].edges[j].messages[obj.nodeNames.index(equality[i].name)] = obj.nodes[not obj.nodeNames.index(equality[i].name)].messages[obj.nodes[not obj.nodeNames.index(equality[i].name)].edgeNames.index(obj.name)]
+			for j, obj in enumerate(LDPC.equality[i].edges):
+				LDPC.equality[i].edges[j].messages[obj.nodeNames.index(LDPC.equality[i].name)] = obj.nodes[not obj.nodeNames.index(LDPC.equality[i].name)].messages[obj.nodes[not obj.nodeNames.index(LDPC.equality[i].name)].edgeNames.index(obj.name)]
 				
 			#2 Take incoming messages from C and B
-			FG.generateMessage(C[i], equality[i])
+			FG.generateMessage(LDPC.C[i], LDPC.equality[i])
 			
 			if(i < c-b):
-				FG.generateMessage(B[i], equality[i])
+				FG.generateMessage(LDPC.B[i], LDPC.equality[i])
 
 				
 			#3 Calculate outgoing messages towards edges
-			for outgoing in equality[i].edges: #For each outgoing message
-				tempOut = equality[i].function.copy()
-				for incoming in equality[i].edges: #Loop through all incoming messages, multiply all messages with outgoing function
+			for outgoing in LDPC.equality[i].edges: #For each outgoing message
+				tempOut = LDPC.equality[i].function.copy()
+				for incoming in LDPC.equality[i].edges: #Loop through all incoming messages, multiply all messages with outgoing function
 					if (incoming != outgoing): 
-						tempMessage = incoming.messages[incoming.nodeNames.index(equality[i].name)]
-						a =  [1] *len(equality[i].function.shape)
-						a[equality[i].edgeNames.index(incoming.name)] = -1
+						tempMessage = incoming.messages[incoming.nodeNames.index(LDPC.equality[i].name)]
+						a =  [1] *len(LDPC.equality[i].function.shape)
+						a[LDPC.equality[i].edgeNames.index(incoming.name)] = -1
 						tempOut *= tempMessage.reshape(tuple(a))
 			
-				tempTup = list(range( len(equality[i].function.shape)))
-				tempTup.pop(equality[i].edgeNames.index(outgoing.name))
+				tempTup = list(range( len(LDPC.equality[i].function.shape)))
+				tempTup.pop(LDPC.equality[i].edgeNames.index(outgoing.name))
 				messageOut = np.sum(tempOut, tuple(tempTup))	
 				#Normalize messages:
 				messageOut = messageOut/(np.sum(messageOut))
-				equality[i].messages[equality[i].edgeNames.index(outgoing.name)] = messageOut	
+				LDPC.equality[i].messages[LDPC.equality[i].edgeNames.index(outgoing.name)] = messageOut	
 
 	
 
 	#3 Calculate downward Messages
-		for i, x in enumerate(check):
+		for i, x in enumerate(LDPC.check):
 			#1 Take incomming messages from interconnect
-			for j, obj in enumerate(check[i].edges):
-				check[i].edges[j].messages[obj.nodeNames.index(check[i].name)] = obj.nodes[not obj.nodeNames.index(check[i].name)].messages[obj.nodes[not obj.nodeNames.index(check[i].name)].edgeNames.index(obj.name)]
+			for j, obj in enumerate(LDPC.check[i].edges):
+				LDPC.check[i].edges[j].messages[obj.nodeNames.index(LDPC.check[i].name)] = obj.nodes[not obj.nodeNames.index(LDPC.check[i].name)].messages[obj.nodes[not obj.nodeNames.index(LDPC.check[i].name)].edgeNames.index(obj.name)]
 				
 			#2 Calculate outgoing messages towards edges
-			for outgoing in check[i].edges: #For each outgoing message
-				tempOut = check[i].function.copy()
-				for incoming in check[i].edges: #Loop through all incoming messages, multiply all messages with outgoing function
+			for outgoing in LDPC.check[i].edges: #For each outgoing message
+				tempOut = LDPC.check[i].function.copy()
+				for incoming in LDPC.check[i].edges: #Loop through all incoming messages, multiply all messages with outgoing function
 					if (incoming != outgoing): 
-						tempMessage = incoming.messages[incoming.nodeNames.index(check[i].name)]
-						a =  [1] *len(check[i].function.shape)
-						a[check[i].edgeNames.index(incoming.name)] = -1
+						tempMessage = incoming.messages[incoming.nodeNames.index(LDPC.check[i].name)]
+						a =  [1] *len(LDPC.check[i].function.shape)
+						a[LDPC.check[i].edgeNames.index(incoming.name)] = -1
 						tempOut *= tempMessage.reshape(tuple(a))
 			
-				tempTup = list(range( len(check[i].function.shape)))
-				tempTup.pop(check[i].edgeNames.index(outgoing.name))
+				tempTup = list(range( len(LDPC.check[i].function.shape)))
+				tempTup.pop(LDPC.check[i].edgeNames.index(outgoing.name))
 				messageOut = np.sum(tempOut, tuple(tempTup))
 				messageOut = messageOut/(np.sum(messageOut))
-				check[i].messages[check[i].edgeNames.index(outgoing.name)] = messageOut	
+				LDPC.check[i].messages[LDPC.check[i].edgeNames.index(outgoing.name)] = messageOut	
 	
 	
 	#4 See if the probabilities of outgoing messages have changed (significantly)
-		for i, obj in enumerate(B):
-			x  = equality[i].messages[equality[i].edgeNames.index(B[i].name), 0]
-			if (abs(prevMessages_B[i]-x) > 0.001):
-				boolean = False
-			prevMessages_B[i] = x
+		if (option == "e"): #Encoding option is called, outgoing messages to c are needed
+			for i, obj in enumerate(LDPC.C):
+				x  = LDPC.equality[i].messages[LDPC.equality[i].edgeNames.index(LDPC.C[i].name), 0]
+				if (abs(prevMessages[i]-x) > 0.001):
+					boolean = False
+				prevMessages[i] = x
+			
+		if (option == "d"): #Decoding option is called, outgoing messages to b are needed
+			for i, obj in enumerate(LDPC.B):
+				x  = LDPC.equality[i].messages[LDPC.equality[i].edgeNames.index(LDPC.B[i].name), 0]
+				if (abs(prevMessages[i]-x) > 0.001):
+					boolean = False
+				prevMessages[i] = x
 			
 		if (boolean):
 			break
 			
 	#5 After looping calculate outoing messages to B
 	temp = []
-	for i, obj in enumerate(B):
-		temp.append(FG.findMarginal(B[i], out[i]))			
+	for i, obj in enumerate(LDPC.B):
+		temp.append(FG.findMarginal(LDPC.B[i], LDPC.out[i]))			
 	print(temp)
 	finalMessage = []
 	for obj in temp:
