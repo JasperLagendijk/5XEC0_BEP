@@ -11,7 +11,45 @@ class LDPC_Code():
 		self.out = out
 		self.check = check
 		self.equality = equality
+	def reset(self):
+		for i, x in enumerate(self.B):
+			for j, y in enumerate(self.B[i].messages):
+				self.B[i].messages[j] *= -100 
+				self.out[i].messages[j] *= -100 
+		for i, x in enumerate(self.C):
+			for j, y in enumerate(self.C[i].messages):
+				self.C[i].messages[j] *= -100 
+				self.equality[i].messages[j] *= -100 
+				self.inp[i].messages[j] *= -100 
+		for i, x in enumerate(self.check):
+			for j, y in enumerate(self.check[i].messages):
+				self.check[i].messages[j] *= -100 
+
+def flip_bit(code, n=1):
+	temp = []
+	i = 0
+	if (n > len(code)):
+		n = len(code)
 	
+	while(i < n):
+			a = random.randint(0, len(code)-1)
+			if (not a in temp):
+					i += 1
+			code[a] = 1-code[a]
+			temp.append(a)
+	return code	
+		
+	
+
+def LDPC_encode_m(code, generator):
+	w = np.zeros(max(generator.shape))
+	for i, c in enumerate(generator):
+		temp = np.sum(generator[i, :]*code) % 2
+		if (i > max(generator.shape)-min(generator.shape)):
+			temp = not temp
+		w[i] = temp
+	
+	return w
 
 def LDPC_parity(k, n, j=3):
 	matrix = np.zeros((n-k, n))
@@ -105,24 +143,33 @@ def calculate_LDPC(LDPC, b, c, prob, base=10, option="d", domain="p"): #Decoding
 	
 	#0 Initialize probabilities
 		#1 Transform to probability domain
-		m = []
+	m = []
 	if(domain == "l"):
 		for p in prob:
 			x = pow(base, p)
-			b = 1/(x+1)
-			a = b-1
-			m.append(a, b)	
+			y = 1/(x+1)
+			a = 1-y
+			m.append(np.array([a, y]))
 	if(domain == "p"):
 		for a in prob:
-			m.append(np.array(a, 1-a))
-			
-			
+			m.append(np.array([a, 1-a]))	
+							
 	if (option == "e"): #Encoding option is chosen, probabilities for incoming bit are enabled
 		prevMessages = np.zeros(c)
-	if (option == "d"):	
+		if(len(m) != b): #Not enough bits in the codeword -> End program
+			print("ERROR: Incorrect codeword length")
+			quit()
+		for i  in (range(b)): #Set incomming messages
+			LDPC.out[i].createFunction(m[i])
+			
+			
+	if (option == "d"):	#Decoding option is chosen, probabilities for 
 		prevMessages = np.zeros(b)
-	
-	
+		if(len(m) != c): #Not enough bits in the codeword -> End program
+			print("ERROR: Incorrect codeword length:", len(m))	
+			quit()
+		for i  in (range(c)): #Set incomming messages
+			LDPC.inp[i].createFunction(m[i])
 	
 	#1 Set messages outgoing messages from checknodes to [0.5,0.5]
 	for i, obj in enumerate(LDPC.check):
@@ -133,7 +180,7 @@ def calculate_LDPC(LDPC, b, c, prob, base=10, option="d", domain="p"): #Decoding
 	
 	
 	test = 0
-	for k in range(1000):
+	for k in range(100):
 	#2 Calculate upward Messages
 		a = 0
 		boolean = True
@@ -149,6 +196,8 @@ def calculate_LDPC(LDPC, b, c, prob, base=10, option="d", domain="p"): #Decoding
 			if(i < c-b):
 				FG.generateMessage(LDPC.B[i], LDPC.equality[i])
 
+			#print("Node:", LDPC.equality[i].name)
+			#LDPC.C[i].printNodes()
 				
 			#3 Calculate outgoing messages towards edges
 			for outgoing in LDPC.equality[i].edges: #For each outgoing message
@@ -156,6 +205,7 @@ def calculate_LDPC(LDPC, b, c, prob, base=10, option="d", domain="p"): #Decoding
 				for incoming in LDPC.equality[i].edges: #Loop through all incoming messages, multiply all messages with outgoing function
 					if (incoming != outgoing): 
 						tempMessage = incoming.messages[incoming.nodeNames.index(LDPC.equality[i].name)]
+						#print("Message going to:", LDPC.equality[i].name, "from:", incoming.name, ":", tempMessage)
 						a =  [1] *len(LDPC.equality[i].function.shape)
 						a[LDPC.equality[i].edgeNames.index(incoming.name)] = -1
 						tempOut *= tempMessage.reshape(tuple(a))
@@ -164,7 +214,9 @@ def calculate_LDPC(LDPC, b, c, prob, base=10, option="d", domain="p"): #Decoding
 				tempTup.pop(LDPC.equality[i].edgeNames.index(outgoing.name))
 				messageOut = np.sum(tempOut, tuple(tempTup))	
 				#Normalize messages:
-				messageOut = messageOut/(np.sum(messageOut))
+				if (np.sum(messageOut) > 0):
+					messageOut = messageOut/(np.sum(messageOut))
+				#print("Outgoing message from:", LDPC.equality[i].name, "to:", outgoing.name,":", messageOut)
 				LDPC.equality[i].messages[LDPC.equality[i].edgeNames.index(outgoing.name)] = messageOut	
 
 	
@@ -181,6 +233,7 @@ def calculate_LDPC(LDPC, b, c, prob, base=10, option="d", domain="p"): #Decoding
 				for incoming in LDPC.check[i].edges: #Loop through all incoming messages, multiply all messages with outgoing function
 					if (incoming != outgoing): 
 						tempMessage = incoming.messages[incoming.nodeNames.index(LDPC.check[i].name)]
+						#print("Message going to:", LDPC.check[i].name, "from:", incoming.name, ":", tempMessage)
 						a =  [1] *len(LDPC.check[i].function.shape)
 						a[LDPC.check[i].edgeNames.index(incoming.name)] = -1
 						tempOut *= tempMessage.reshape(tuple(a))
@@ -188,7 +241,10 @@ def calculate_LDPC(LDPC, b, c, prob, base=10, option="d", domain="p"): #Decoding
 				tempTup = list(range( len(LDPC.check[i].function.shape)))
 				tempTup.pop(LDPC.check[i].edgeNames.index(outgoing.name))
 				messageOut = np.sum(tempOut, tuple(tempTup))
-				messageOut = messageOut/(np.sum(messageOut))
+				#print("Outgoing message from:", LDPC.check[i].name, "to:", outgoing.name,":", messageOut)	
+				if (np.sum(messageOut) > 0):
+					messageOut = messageOut/(np.sum(messageOut))
+				
 				LDPC.check[i].messages[LDPC.check[i].edgeNames.index(outgoing.name)] = messageOut	
 	
 	
@@ -196,31 +252,38 @@ def calculate_LDPC(LDPC, b, c, prob, base=10, option="d", domain="p"): #Decoding
 		if (option == "e"): #Encoding option is called, outgoing messages to c are needed
 			for i, obj in enumerate(LDPC.C):
 				x  = LDPC.equality[i].messages[LDPC.equality[i].edgeNames.index(LDPC.C[i].name), 0]
-				if (abs(prevMessages[i]-x) > 0.001):
+				if (abs(prevMessages[i]-x) > 0.0001):
 					boolean = False
 				prevMessages[i] = x
 			
 		if (option == "d"): #Decoding option is called, outgoing messages to b are needed
 			for i, obj in enumerate(LDPC.B):
 				x  = LDPC.equality[i].messages[LDPC.equality[i].edgeNames.index(LDPC.B[i].name), 0]
-				if (abs(prevMessages[i]-x) > 0.001):
+				if (abs(prevMessages[i]-x) > 0.0001):
 					boolean = False
 				prevMessages[i] = x
 			
 		if (boolean):
 			break
 			
-	#5 After looping calculate outoing messages to B
+	#5 After looping calculate outoing messages 
 	temp = []
-	for i, obj in enumerate(LDPC.B):
-		temp.append(FG.findMarginal(LDPC.B[i], LDPC.out[i]))			
-	print(temp)
 	finalMessage = []
-	for obj in temp:
-		finalMessage.append(np.argmax(obj))
+	if (option == "e"):
+		for i, obj in enumerate(LDPC.C):
+			temp.append(FG.findMarginal(LDPC.C[i], LDPC.inp[i]))
+		print(temp)
+		for obj in temp:
+			finalMessage.append(np.argmax(obj))
 		
-	print(finalMessage)
-
+	if (option == "d"):
+		for i, obj in enumerate(LDPC.B):
+			temp.append(FG.findMarginal(LDPC.B[i], LDPC.out[i]))			
+	
+		for obj in temp:
+			finalMessage.append(np.argmax(obj))
+		
+	return finalMessage, temp
 
 def generate_RA():
 	pass

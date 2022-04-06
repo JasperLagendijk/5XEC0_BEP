@@ -44,7 +44,7 @@ class Node():
 				l.append(obj.nSymbols)
 			tempArray = np.zeros(np.product(l))
 			for i, x in enumerate(tempArray):
-				if (not (bin(i).count("1") % 2)):
+				if ((bin(i).count("1") % 2)):
 					tempArray[i] = 1	
 			self.function = tempArray.reshape(tuple(l))
 		
@@ -215,8 +215,10 @@ def findMessage(sender, recip, l=[]):
 def findMarginal(edge, node):
 	a = findMessage(edge, node)
 	b = findMessage(node, edge)
-	marginal = np.divide(a*b, np.sum(a*b))
-	
+	if (np.sum(a*b) > 0):
+		marginal = np.divide(a*b, np.sum(a*b))
+	else:
+		marginal = a*b
 	return marginal
 
 
