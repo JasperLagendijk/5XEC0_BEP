@@ -1,13 +1,5 @@
 import numpy as np
-from numpy.linalg import norm
-
-
-
-class Message():
-	def __init__(self, varName, message):
-		self.varName = varName #List of incomming messages, 2-dimensional array -> x: distribution of vars, y: connected node
-		self.message = message #List of outgoing messages, 2-dimensional array -> x: distribution of vars
-		
+import math
 
 
 class Node():
@@ -18,6 +10,7 @@ class Node():
 			self.name = nodeName
 		self.edges = []
 		self.messages = np.empty((0, 2))
+		self.messagesLLR = np.empty((0, 1))
 		self.function = "Empty"
 		self.edgeNames = []
 		
@@ -28,11 +21,16 @@ class Node():
 			self.edges.append(edge)
 			self.edgeNames.append(edge.name)
 			self.messages = np.concatenate((self.messages, -1 * np.ones((1, edge.nSymbols))))
+			self.messagesLLR = np.concatenate((self.messagesLLR, float("NaN")*np.ones((1, 1))))
 			
 	def printEdges(self):
-			for obj in self.edges:
-				print("Edge: ", obj.name, "Message: ", self.messages[self.edgeNames.index(obj.name)])
+		for obj in self.edges:
+			print("Edge: ", obj.name, "Message: ", self.messages[self.edgeNames.index(obj.name)])
 
+	def printEdgesLLR(self):
+		for obj in self.edges:
+			print("Edge: ", obj.name, "Message: ", self.messagesLLR[self.edgeNames.index(obj.name)])
+		
 		
 	def createFunction(self, probArray=np.zeros([2,2]), nodeType="f"): #Not finished -> just for now
 		if (nodeType == "f"): #Regular function, array given directly
@@ -69,6 +67,7 @@ class Edge():
 			self.name = edgeName
 		self.nodes = []
 		self.messages = np.empty((0, nSymbols))
+		self.messagesLLR = np.empty((0, 1))
 		self.nodeNames = []
 		
 	def addNode(self, node):
@@ -78,13 +77,17 @@ class Edge():
 			self.nodes.append(node)
 			self.nodeNames.append(node.name)
 			self.messages = np.concatenate((self.messages, -1 * np.ones((1, self.nSymbols))))
+			self.messagesLLR = np.concatenate((self.messagesLLR, float("NaN")*np.ones((1, 1))))
 			node.addEdge(self)
 
 	
 	def printNodes(self):
 		for obj in self.nodes:
 			print("Node: ", obj.name, "Message: ", self.messages[self.nodeNames.index(obj.name)])
-
+	
+	def printNodes(self):
+		for obj in self.nodes:
+			print("Node: ", obj.name, "Message: ", self.messagesLLR[self.nodeNames.index(obj.name)])
 
 
 
@@ -112,6 +115,93 @@ def createNodes(nNodes, nodeName="f", startVal=1):
 	return nodes
 
 
+def jacobian(L):
+	if (not isinstance(L, list)):
+		print("ERROR: incorrect input, in Jacobian function")
+		return 0
+	if (len(L) > 2): #Recursivity needed 
+		print(len(L))
+		temp.pop(0)
+		temp = jacobian(temp)
+		if (len(temp) > 1):
+			return [L[0], temp]
+		else:
+			L = [L[0], temp]
+	if (len(L) == 2): #Return Jacobian value
+		temp = max(L[0], L[1])+math.log(1+math.exp(-abs(L[0]-L[1])))
+		return temp
+	elif(len(L) == 1):
+		return L[0]
+	else: #List with length 0 -> return 0
+		return 0
+
+def f_check(x, y):
+	return jacobian([x, y]) - jacobian([0, x+y])
+
+
+
+def calculateMessageProb(sender, outgoing):
+	tempOut = sender.function.copy()
+	for incoming in sender.edges: #Loop through all incoming messages, multiply all messages with outgoing function
+		if (incoming != outgoing): 
+			tempMessage = incoming.messages[incoming.nodeNames.index(sender.name)]
+			#print("Message going to:", sender.name, "from:", incoming.name, ":", tempMessage)
+			a =  [1] *len(sender.function.shape)
+			a[sender.edgeNames.index(incoming.name)] = -1
+			tempOut *= tempMessage.reshape(tuple(a))
+			
+	tempTup = list(range( len(sender.function.shape)))
+	tempTup.pop(sender.edgeNames.index(outgoing.name))
+	messageOut = np.sum(tempOut, tuple(tempTup))	
+	#Normalize messages:
+	if (np.sum(messageOut) > 0):
+		messageOut = messageOut/(np.sum(messageOut))
+	#print("Outgoing message from:", sender.name, "to:", outgoing.name,":", messageOut)
+	return messageOut
+
+
+def calculateMessageParity(sender):
+	if (len(sender.edges) == 1): #No parity checking needed
+		pass
+	elif (len(sender.edges) == 2):
+		pass
+	elif (len(sender.edges) == 3): #Simple parity checking using jacobian logarithm
+		for outgoing in sender.edges:
+			L = []
+			for incoming in sender.edges:
+				if incoming != outgoing:
+					L.append(incoming.messagesLLR[incoming.nodeNames.index(sender.name)])
+				sender.messagesLLR[sender.edgeNames.index(outgoing.name)] = jacobian([L[0], L[1]]) - jacobian([0, (L[0]+L[1])])
+	elif (len(sender.edges) > 3): #Check nodes need to be opened -> spa in check nodes
+		U = np.zeros((len(sender.edges)-2, 2))
+		L = []
+		for incoming in sender.edges:
+			L.append(incoming.messagesLLR[incoming.nodeNames.index(sender.name)])
+		#Step 1: Calculate messages inward for first and last U (U2 and UD-2)
+		U[0, 0] = f_check(L[0], L[1])
+		U[-1, 1] = f_check(L[-1], L[-2])
+		
+		if (len(sender.edges) > 4):
+			for i in range(1, len(sender.edges)-2):
+				#set message going right
+				U[i, 0] = f_check(U[i-1, 0], L[i+1])
+				#set message going left
+				U[-(1+i), 1] = f_check(U[-i, 1], L[-(i+2)])
+		sender.messagesLLR[0] = f_check(U[0,1], L[1])
+		sender.messagesLLR[1] = f_check(U[0, 1], L[0])
+		sender.messagesLLR[-2] = f_check(U[-1, 0], L[-1])
+		sender.messagesLLR[-1] = f_check(U[-1, 0], L[-2])
+
+		for i in range(2, len(sender.edges)-2):
+			sender.messagesLLR[i] = f_check(U[i-2, 0], U[i-1, 1])
+		
+		
+def calculateMessageEquality(sender, outgoing):
+	tempOut = 0
+	for incoming in sender.edges:
+		if (incoming != outgoing):
+			tempOut += incoming.messagesLLR[incoming.nodeNames.index(sender.name)] 
+	sender.messagesLLR[sender.edgeNames.index(outgoing.name)] = tempOut
 
 def generateMessage(sender, recip): #Generates message from acyclic, forest factor graphs
 	if (isinstance(sender, Edge)):
