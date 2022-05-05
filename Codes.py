@@ -47,7 +47,7 @@ def LDPC_encode_m(code, generator):
 	for i, c in enumerate(generator):
 		temp = np.sum(generator[i, :]*code) % 2
 		if (i > max(generator.shape)-min(generator.shape)):
-			temp = not temp
+			temp = temp
 		w[i] = temp
 	
 	return w
@@ -149,7 +149,7 @@ def calculate_LDPC_LLR(LDPC, b, c, prob, base=10, option="d", domain="p"): #Deco
 	if(domain == "p"):
 		for x in prob:
 			m.append(math.log((1-x)/x))
-	#print("Incoming message:", m)						
+	
 	if (option == "e"): #Encoding option is chosen, probabilities for incoming bit are enabled
 		prevMessages = np.zeros(c)
 		if(len(m) != b): #Not enough bits in the codeword -> End program
@@ -219,7 +219,7 @@ def calculate_LDPC_LLR(LDPC, b, c, prob, base=10, option="d", domain="p"): #Deco
 	if (option == "e"):
 		for i, obj in enumerate(LDPC.C):
 			LDPC.C[i].messagesLLR[LDPC.C[i].nodeNames.index(LDPC.inp[i].name)] = LDPC.equality[i].messagesLLR[LDPC.equality[i].edgeNames.index(LDPC.C[i].name)]
-			LLR.append(LDPC.C[i].messagesLLR[LDPC.C[i].nodeNames.index(LDPC.inp[i].name)]+LDPC.inp[i].messagesLLR[LDPC.out[i].edgeNames.index(LDPC.C[i].name)])
+			LLR.append(LDPC.C[i].messagesLLR[LDPC.C[i].nodeNames.index(LDPC.inp[i].name)]+LDPC.inp[i].messagesLLR[LDPC.inp[i].edgeNames.index(LDPC.C[i].name)])
 			
 		for obj in LLR:
 			if (obj >= 0):
@@ -279,7 +279,7 @@ def calculate_LDPC_prob(LDPC, b, c, prob, base=10, option="d", domain="p"): #Dec
 		for j, x in enumerate(LDPC.check[i].messages):
 			LDPC.check[i].messages[j] = np.array([0.5, 0.5])
 	
-	for k in range(5):
+	for k in range(100):
 	#2 Calculate upward Messages
 		a = 0
 		boolean = True
@@ -328,7 +328,7 @@ def calculate_LDPC_prob(LDPC, b, c, prob, base=10, option="d", domain="p"): #Dec
 				prevMessages[i] = x
 			
 		if (boolean):
-			break
+			pass#break
 		#print("Iteration:", k)
 	#5 After looping calculate outoing messages 
 	temp = []

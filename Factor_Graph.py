@@ -116,25 +116,24 @@ def createNodes(nNodes, nodeName="f", startVal=1):
 
 
 def jacobian(L):
-	if (not isinstance(L, list)):
-		print("ERROR: incorrect input, in Jacobian function")
-		return 0
-	if (len(L) > 2): #Recursivity needed 
-		print(len(L))
-		temp.pop(0)
-		temp = jacobian(temp)
-		if (len(temp) > 1):
-			return [L[0], temp]
-		else:
-			L = [L[0], temp]
-	if (len(L) == 2): #Return Jacobian value
-		temp = max(L[0], L[1])+math.log(1+math.exp(-abs(L[0]-L[1])))
-		return temp
-	elif(len(L) == 1):
-		return L[0]
-	else: #List with length 0 -> return 0
-		return 0
-
+        if (not isinstance(L, list)):
+                print("ERROR: incorrect input, in Jacobian function")
+                return 0
+        if(len(L) == 1):
+                return L[0]
+        if(len(L) == 2):
+                return max(L[0], L[1])+math.log(1+math.exp(-abs(L[0]-L[1])))
+	
+        if (len(L) > 2):
+                temp = jacobian([L[-1], L[-2]])
+                L.pop(-1)
+                L.pop(-1)
+                for i in range(len(L)):
+                        temp = jacobian([temp, L[-1]])
+                        L.pop(-1)
+         #Return Jacobian value
+                return temp
+	
 def f_check(x, y):
 	return jacobian([x, y]) - jacobian([0, x+y])
 
@@ -162,27 +161,29 @@ def calculateMessageProb(sender, outgoing):
 
 def calculateMessageParity(sender):
 	if (len(sender.edges) == 1): #No parity checking needed
-		pass
+		return 0
 	elif (len(sender.edges) == 2):
-		pass
+		return 0
 	elif (len(sender.edges) == 3): #Simple parity checking using jacobian logarithm
 		for outgoing in sender.edges:
 			L = []
 			for incoming in sender.edges:
 				if incoming != outgoing:
 					L.append(incoming.messagesLLR[incoming.nodeNames.index(sender.name)])
-				sender.messagesLLR[sender.edgeNames.index(outgoing.name)] = jacobian([L[0], L[1]]) - jacobian([0, (L[0]+L[1])])
+			sender.messagesLLR[sender.edgeNames.index(outgoing.name)] =  f_check(L[0], L[1])#jacobian([L[0], L[1]]) - jacobian([0, (L[0]+L[1])])
+	
 	elif (len(sender.edges) > 3): #Check nodes need to be opened -> spa in check nodes
-		U = np.zeros((len(sender.edges)-2, 2))
+		U = np.zeros((len(sender.edges)-3, 2))
 		L = []
 		for incoming in sender.edges:
 			L.append(incoming.messagesLLR[incoming.nodeNames.index(sender.name)])
+			#print(incoming.messagesLLR[incoming.nodeNames.index(sender.name)], incoming.name)
 		#Step 1: Calculate messages inward for first and last U (U2 and UD-2)
 		U[0, 0] = f_check(L[0], L[1])
 		U[-1, 1] = f_check(L[-1], L[-2])
 		
 		if (len(sender.edges) > 4):
-			for i in range(1, len(sender.edges)-2):
+			for i in range(1, len(sender.edges)-3):
 				#set message going right
 				U[i, 0] = f_check(U[i-1, 0], L[i+1])
 				#set message going left
@@ -194,7 +195,7 @@ def calculateMessageParity(sender):
 
 		for i in range(2, len(sender.edges)-2):
 			sender.messagesLLR[i] = f_check(U[i-2, 0], U[i-1, 1])
-		
+	
 		
 def calculateMessageEquality(sender, outgoing):
 	tempOut = 0
