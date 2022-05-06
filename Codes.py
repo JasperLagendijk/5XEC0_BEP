@@ -4,13 +4,15 @@ import random
 import math
 
 class LDPC_Code():
-	def __init__(self, B, C, inp, out, check, equality):
+	def __init__(self, b, c, B, C, inp, out, check, equality):
 		self.B = B
 		self.C = C
 		self.inp = inp
 		self.out = out
 		self.check = check
 		self.equality = equality
+		self.c = c
+		self.b = b
 	def reset(self):
 		for i, x in enumerate(self.B):
 			for j, y in enumerate(self.B[i].messages):
@@ -91,8 +93,13 @@ def LDPC_parity(k, n, j=3):
 						l.pop(l.index(r))
 	return matrix
 	
-def generate_LDPC(b, c, parity):
+def generate_LDPC(parity):
 	#Create necessary nodes and edges
+	b = parity.shape[0]
+	c = parity.shape[1]
+	
+	
+	
 	C = FG.createEdges(c, edgeName="C")
 	B = FG.createEdges(b, edgeName="B")
 	equality = FG.createNodes(c, nodeName="=")
@@ -134,11 +141,11 @@ def generate_LDPC(b, c, parity):
 		equality[i].createFunction(nodeType="=")
 	
 	
-	LDPC = LDPC_Code(B, C, inp, out, check, equality)
+	LDPC = LDPC_Code(b, c, B, C, inp, out, check, equality)
 	
 	return LDPC
 
-def calculate_LDPC_LLR(LDPC, b, c, prob, base=10, option="d", domain="p"): #Decoding/encoding LDPC code:
+def calculate_LDPC_LLR(LDPC, prob, base=10, option="d", domain="p"): #Decoding/encoding LDPC code:
 	MAX_ACC = 0
 	#0 Initialize probabilities
 		#1 Transform to log likelyhood domain
@@ -151,20 +158,20 @@ def calculate_LDPC_LLR(LDPC, b, c, prob, base=10, option="d", domain="p"): #Deco
 			m.append(math.log((1-x)/x))
 	
 	if (option == "e"): #Encoding option is chosen, probabilities for incoming bit are enabled
-		prevMessages = np.zeros(c)
-		if(len(m) != b): #Not enough bits in the codeword -> End program
+		prevMessages = np.zeros(LDPC.c)
+		if(len(m) != LDPC.b): #Not enough bits in the codeword -> End program
 			print("ERROR: Incorrect codeword length")
 			quit()
-		for i  in (range(b)): #Set incoming messages
+		for i  in (range(LDPC.b)): #Set incoming messages
 			LDPC.out[i].messagesLLR[LDPC.out[i].edgeNames.index(LDPC.B[i].name)] = m[i]
 			
 			
 	if (option == "d"):	#Decoding option is chosen, probabilities for outgoing bits are enabled
-		prevMessages = np.zeros(b)
-		if(len(m) != c): #Not enough bits in the codeword -> End program
+		prevMessages = np.zeros(LDPC.b)
+		if(len(m) != LDPC.c): #Not enough bits in the codeword -> End program
 			print("ERROR: Incorrect codeword length:", len(m))	
 			quit()
-		for i  in (range(c)): #Set incoming messages
+		for i  in (range(LDPC.c)): #Set incoming messages
 			LDPC.inp[i].messagesLLR[LDPC.inp[i].edgeNames.index(LDPC.C[i].name)] = m[i]
 	
 	#1 Set messages outgoing messages from checknodes to [0.5,0.5] in LLR = 0
@@ -242,7 +249,7 @@ def calculate_LDPC_LLR(LDPC, b, c, prob, base=10, option="d", domain="p"): #Deco
 	
 	
 
-def calculate_LDPC_prob(LDPC, b, c, prob, base=10, option="d", domain="p"): #Decoding/encoding LDPC code:
+def calculate_LDPC_prob(LDPC, prob, base=10, option="d", domain="p"): #Decoding/encoding LDPC code:
 	MAX_ACC = 0.001
 	#0 Initialize probabilities
 		#1 Transform to probability domain
@@ -258,20 +265,20 @@ def calculate_LDPC_prob(LDPC, b, c, prob, base=10, option="d", domain="p"): #Dec
 			m.append(np.array([a, 1-a]))	
 							
 	if (option == "e"): #Encoding option is chosen, probabilities for incoming bit are enabled
-		prevMessages = np.zeros(c)
-		if(len(m) != b): #Not enough bits in the codeword -> End program
+		prevMessages = np.zeros(LDPC.c)
+		if(len(m) != LDPC.b): #Not enough bits in the codeword -> End program
 			print("ERROR: Incorrect codeword length")
 			quit()
-		for i  in (range(b)): #Set incomming messages
+		for i  in (range(LDPC.b)): #Set incomming messages
 			LDPC.out[i].createFunction(m[i])
 			
 			
 	if (option == "d"):	#Decoding option is chosen, probabilities for outgoing bits are enabled
-		prevMessages = np.zeros(b)
-		if(len(m) != c): #Not enough bits in the codeword -> End program
+		prevMessages = np.zeros(LDPC.b)
+		if(len(m) != LDPC.c): #Not enough bits in the codeword -> End program
 			print("ERROR: Incorrect codeword length:", len(m))	
 			quit()
-		for i  in (range(c)): #Set incomming messages
+		for i  in (range(LDPC.c)): #Set incomming messages
 			LDPC.inp[i].createFunction(m[i])
 	
 	#1 Set messages outgoing messages from checknodes to [0.5,0.5]
@@ -292,7 +299,7 @@ def calculate_LDPC_prob(LDPC, b, c, prob, base=10, option="d", domain="p"): #Dec
 			#2 Take incoming messages from C and B
 			FG.generateMessage(LDPC.C[i], LDPC.equality[i])
 			
-			if(i < c-b):
+			if(i < LDPC.c-LDPC.b):
 				FG.generateMessage(LDPC.B[i], LDPC.equality[i])
 
 			#3 Calculate outgoing messages towards edges
