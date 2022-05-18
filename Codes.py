@@ -179,7 +179,7 @@ def calculate_LDPC_LLR(LDPC, prob, base=10, option="d", domain="p"): #Decoding/e
 		for j, x in enumerate(LDPC.check[i].messagesLLR):
 			LDPC.check[i].messagesLLR[j] = np.array(0)
 	
-	for k in range(10):
+	for k in range(50):
 	#2 Calculate upward Messages
 		a = 0
 		boolean = True

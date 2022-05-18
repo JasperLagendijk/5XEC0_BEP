@@ -12,7 +12,7 @@ SNRdB     = 5:10;
 SNR       = 10.^(SNRdB/10);
 Nsims = 1;
 MinFramError = 100;
-MaxFramSimtd = 1e4;
+MaxFramSimtd = 1e1;
 
 % Modulation
 QAMMOD  = comm.RectangularQAMModulator('ModulationOrder',Mqam,...
@@ -35,6 +35,9 @@ Coded = LDPCENC(Data);
 ProbFerr  = zeros(lenSNR,Nsims);
 ProbBerr  = zeros(lenSNR,Nsims);
 AvgEstSNR = zeros(lenSNR,Nsims);
+
+ProbBerrPy = zeros(lenSNR, Nsims);
+
 
 %%
 % Transmit message with different SNR
@@ -70,16 +73,19 @@ for iSNR = 1:lenSNR
             %Decode Transmitted signal
             LLRs = QamDEMOD(ChanOut);
             Estimates = LDPCDEC(LLRs);
-            %EstimatesPy = LDPCDEC(LLRs);
+            EstimatesPy = pyrunfile("Script.py", "message", parity=Hldpc, data=LLRs);
+            EstimatesPy = double(EstimatesPy)';
             
+            Diff = sum(abs(Data-EstimatesPy))
             NrError = NrError + sum(xor(Estimates,Data));
-            %NrErrorPy = NrErrorPy + sum(xor(EstimatesPy, Data)); 
+            NrErrorPy = NrErrorPy + sum(xor(EstimatesPy, Data)); 
             if sum(xor(Estimates,Data))>0
                 NrFerror = NrFerror + 1;
             else    
             end
                 
         end
+        ProbBerrPy(iSNR, iSim) = NrErrorPy /(Nblock * Ninfo)
         ProbBerr(iSNR,iSim) = NrError / (Nblock * Ninfo);
         ProbFerr(iSNR,iSim) = NrFerror / Nblock;
         AvgEstSNR(iSNR,iSim) =TotEstSNR / Nblock;
@@ -93,3 +99,25 @@ errorbar(SNRdB,mean(ProbBerr,2),std(ProbBerr,0,2),'blue-','linewidth',1);
 errorbar(SNRdB,mean(ProbFerr,2),std(ProbFerr,0,2),'red-','linewidth',1);
 xlim([min(SNRdB)-2 max(SNRdB)+2]);
 set(gca,'YScale','log');
+
+
+%%
+Estimates = LDPCDEC(LLRs);
+Estimates2 = double(pyrunfile("Script.py", "message", parity=Hldpc, data=LLRs));
+test = 0;
+%for i = 1:length(Estimates)
+%    if(Estimates(i) - Estimates2(i) == 0)
+%        test = test + 1;
+%    end
+%end
+Recieved = zeros(length(LLRs),1 );
+
+for i  = 1:length(Recieved)
+    if LLRs(i) >= 0 
+        Recieved(i) = 1;
+    end
+end
+
+
+   
+

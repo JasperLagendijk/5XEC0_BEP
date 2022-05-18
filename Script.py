@@ -7,7 +7,7 @@ from scipy.io import loadmat
 def decode_LDPC(parity, data):
 	#Create LDPC code
 	LDPC = Codes.generate_LDPC(parity)
-	message, prob = Codes.calculate_LDPC_LLR(LDPC, message, domain="l", option="d")
+	message, prob = Codes.calculate_LDPC_LLR(LDPC, data, domain="l", option="d")
 	return message, prob
 
 #parity = Codes.LDPC_parity(b, c)
@@ -17,8 +17,8 @@ def decode_LDPC(parity, data):
 
 
 
-#message, prob = decode_LDPC(parity, data)
-print(x)
+message, prob = decode_LDPC(parity, data)
+#print(x)
 
 
 '''
