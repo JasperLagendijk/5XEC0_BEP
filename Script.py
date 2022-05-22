@@ -4,20 +4,19 @@ import numpy as np
 from scipy.io import loadmat
 
 
-def decode_LDPC(parity, data):
+def decode_LDPC(parity, data, LDPC):
 	#Create LDPC code
-	LDPC = Codes.generate_LDPC(parity)
+	
 	message, prob = Codes.calculate_LDPC_LLR(LDPC, data, domain="l", option="d")
 	return message, prob
 
 #parity = Codes.LDPC_parity(b, c)
 #parity = np.transpose(np.array(np.mat('1 0 1 0; 0 1 1 0; 0 1 1 1; 1 1 0 0 ; 0 0 1 1; 1 0 0 1; 0 1 0 1; 1 0 1 1')))
 #generator = np.array(np.mat('1 0 0 0; 0 1 0 0; 0 0 1 0; 0 0 0 1; 1 1 0 0; 1 0 1 1; 0 1 1 1; 0 0 1 0'))
+LDPC = Codes.generate_LDPC(parity)
 
-
-
-
-message, prob = decode_LDPC(parity, data)
+for i in range (10):
+    message, prob = decode_LDPC(parity, data, LDPC)
 #print(x)
 
 
