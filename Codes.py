@@ -145,7 +145,7 @@ def generate_LDPC(parity):
 	
 	return LDPC
 
-def calculate_LDPC_LLR(LDPC, prob, base=10, option="d", domain="p"): #Decoding/encoding LDPC code:
+def calculate_LDPC_LLR(LDPC, prob, base=10, option="d", domain="p", damp="1"): #Decoding/encoding LDPC code:
 	MAX_ACC = 0
 	#0 Initialize probabilities
 		#1 Transform to log likelyhood domain
@@ -179,7 +179,7 @@ def calculate_LDPC_LLR(LDPC, prob, base=10, option="d", domain="p"): #Decoding/e
 		for j, x in enumerate(LDPC.check[i].messagesLLR):
 			LDPC.check[i].messagesLLR[j] = np.array(0)
 	
-	for k in range(50):
+	for k in range(20):
 	#2 Calculate upward Messages
 		a = 0
 		boolean = True
@@ -209,6 +209,7 @@ def calculate_LDPC_LLR(LDPC, prob, base=10, option="d", domain="p"): #Decoding/e
 				if (abs(prevMessages[i]-x) > MAX_ACC):
 					boolean = False
 				prevMessages[i] = x
+				LDPC.equality[i].messagesLLR[LDPC.equality[i].edgeNames.index(LDPC.C[i].name), 0]
 			
 		if (option == "d"): #Decoding option is called, outgoing messages to b are needed
 			for i, obj in enumerate(LDPC.B):
@@ -216,9 +217,14 @@ def calculate_LDPC_LLR(LDPC, prob, base=10, option="d", domain="p"): #Decoding/e
 				if (abs(prevMessages[i]-x) > MAX_ACC):
 					boolean = False
 				prevMessages[i] = x
+		
+		
+		
 			
 		if (boolean):
-			pass #break
+			break'''
+	
+	
 	
 	#5 After looping calculate outgoing messages 
 	LLR = []
@@ -355,9 +361,3 @@ def calculate_LDPC_prob(LDPC, prob, base=10, option="d", domain="p"): #Decoding/
 			finalMessage.append(np.argmax(obj))
 		
 	return finalMessage, temp
-
-def generate_RA():
-	pass
-	
-def generate_Turbo():
-	pass

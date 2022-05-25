@@ -7,7 +7,7 @@ Ncoded = 648;  % can be 648, 1299, 1944
     Ninfo = CodeRate*Ncoded;
     
 % Simulation Parameters
-SNRdB     = 5:10;
+SNRdB     = 1:10;
     lenSNR    = length(SNRdB);
 SNR       = 10.^(SNRdB/10);
 Nsims = 1;
@@ -29,7 +29,6 @@ catch
 end
 Data = randi([0 1],Ninfo,1);
 Coded = LDPCENC(Data);
-
 
 % Keep track
 ProbFerr  = zeros(lenSNR,Nsims);
@@ -74,26 +73,25 @@ for iSNR = 1:lenSNR
             %Decode Transmitted signal
             LLRs = QamDEMOD(ChanOut);
             Estimates = LDPCDEC(LLRs);
-            EstimatesPy = pyrunfile("Script.py", "message", parity=Hldpc, data=-LLRs);
-            EstimatesPy = double(EstimatesPy)';
+            %EstimatesPy = pyrunfile("Script.py", "message", parity=Hldpc, data=-LLRs);
+            %EstimatesPy = double(EstimatesPy)';
             
-            Diff = sum(abs(Estimates-EstimatesPy))
             NrError = NrError + sum(xor(Estimates,Data));
-            NrErrorPy = NrErrorPy + sum(xor(EstimatesPy, Data)); 
+            %NrErrorPy = NrErrorPy + sum(xor(EstimatesPy, Data)); 
             if sum(xor(Estimates,Data))>0
                 NrFerror = NrFerror + 1;
             else    
             end
-            if sum(xor(EstimatesPy, Data))>0
-                NrFerrorPy = NrFerrorPy + 1;
-            else
-            end
+            %if sum(xor(EstimatesPy, Data))>0
+            %    NrFerrorPy = NrFerrorPy + 1;
+            %else
+            %end
         end
-        ProbBerrPy(iSNR, iSim) = NrErrorPy /(Nblock * Ninfo)
+        %ProbBerrPy(iSNR, iSim) = NrErrorPy /(Nblock * Ninfo)
         ProbBerr(iSNR,iSim) = NrError / (Nblock * Ninfo);
         
         ProbFerr(iSNR,iSim) = NrFerror / Nblock;
-        ProbFerrPy(iSNR, iSim) = NrFerrorPy/Nblock;
+        %ProbFerrPy(iSNR, iSim) = NrFerrorPy/Nblock;
         AvgEstSNR(iSNR,iSim) =TotEstSNR / Nblock;
     end
 end
@@ -104,29 +102,7 @@ figure(99);
 grid on; hold on;
 errorbar(SNRdB,mean(ProbBerr,2),std(ProbBerr,0,2),'blue-','linewidth',1);
 errorbar(SNRdB,mean(ProbFerr,2),std(ProbFerr,0,2),'red-','linewidth',1);
-errorbar(SNRdB,mean(ProbBerrPy,2), std(ProbBerrPy,0,2), 'green-','linewidth',1)
-errorbar(SNRdB,mean(ProbFerrPy, 2), std(ProbFerrPy, 0, 2),'yellow-','linewidth',1)
+%errorbar(SNRdB,mean(ProbBerrPy,2), std(ProbBerrPy,0,2), 'green-','linewidth',1)
+%errorbar(SNRdB,mean(ProbFerrPy, 2), std(ProbFerrPy, 0, 2),'yellow-','linewidth',1)
 xlim([min(SNRdB)-2 max(SNRdB)+2]);
 set(gca,'YScale','log');
-
-
-%%
-Estimates = LDPCDEC(LLRs);
-Estimates2 = double(pyrunfile("Script.py", "message", parity=Hldpc, data=LLRs));
-test = 0;
-%for i = 1:length(Estimates)
-%    if(Estimates(i) - Estimates2(i) == 0)
-%        test = test + 1;
-%    end
-%end
-Recieved = zeros(length(LLRs),1 );
-
-for i  = 1:length(Recieved)
-    if LLRs(i) >= 0 
-        Recieved(i) = 1;
-    end
-end
-
-
-   
-
