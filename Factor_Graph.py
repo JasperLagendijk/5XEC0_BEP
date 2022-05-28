@@ -132,7 +132,7 @@ def jacobian(L):
                         temp = jacobian([temp, L[-1]])
                         L.pop(-1)
          #Return Jacobian value
-                return temp
+                return tempjac
 	
 def f_check(x, y):
 	return jacobian([x, y]) - jacobian([0, x+y])
@@ -196,6 +196,42 @@ def calculateMessageParity(sender):
 		for i in range(2, len(sender.edges)-2):
 			sender.messagesLLR[i] = f_check(U[i-2, 0], U[i-1, 1])
 	
+	
+def calculateMessageGallager(sender):
+	for outgoing in sender.edges:
+		L = []
+		for incoming in sender.edges:
+			if incoming != outgoing:
+				L.append(incoming.messagesLLR[incoming.nodeNames.index(sender.name)])
+		L = np.array(L)
+		sender.messagesLLR[sender.edgeNames.index(outgoing.name)] =  2*np.arctanh(np.prod(np.tanh(0.5*L)))
+	
+def calculateMessageMinSum(sender):
+	for outgoing in sender.edges:
+		L = []
+		for incoming in sender.edges:
+			if incoming != outgoing:
+				L.append(incoming.messagesLLR[incoming.nodeNames.index(sender.name)])
+		
+		sender.messagesLLR[sender.edgeNames.index(outgoing.name)] = np.prod(np.sign(L)) * np.min(np.abs(L))
+
+def calculateMessageMinSumAttenuated(sender, c):
+	for outgoing in sender.edges:
+		L = []
+		for incoming in sender.edges:
+			if incoming != outgoing:
+				L.append(incoming.messagesLLR[incoming.nodeNames.index(sender.name)])
+		
+		sender.messagesLLR[sender.edgeNames.index(outgoing.name)] = np.prod(np.sign(L)) * c * np.min(np.abs(L))
+
+def calculateMessageMinSumOffset(sender, c):
+	for outgoing in sender.edges:
+		L = []
+		for incoming in sender.edges:
+			if incoming != outgoing:
+				L.append(incoming.messagesLLR[incoming.nodeNames.index(sender.name)])
+		
+		sender.messagesLLR[sender.edgeNames.index(outgoing.name)] = np.prod(np.sign(L)) * np.max([np.min(np.abs(L))-c, 0])	
 		
 def calculateMessageEquality(sender, outgoing):
 	tempOut = 0

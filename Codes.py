@@ -95,9 +95,8 @@ def LDPC_parity(k, n, j=3):
 	
 def generate_LDPC(parity):
 	#Create necessary nodes and edges
-	b = parity.shape[0]
+	b = parity.shape[1]-parity.shape[0]
 	c = parity.shape[1]
-	
 	
 	
 	C = FG.createEdges(c, edgeName="C")
@@ -145,14 +144,13 @@ def generate_LDPC(parity):
 	
 	return LDPC
 
-def calculate_LDPC_LLR(LDPC, prob, base=10, option="d", domain="p", damp="1"): #Decoding/encoding LDPC code:
+def calculate_LDPC_LLR(LDPC, prob, base=10, option="d", domain="p", checkType="default", constant=0.5): #Decoding/encoding LDPC code:
 	MAX_ACC = 0
 	#0 Initialize probabilities
 		#1 Transform to log likelyhood domain
 	m = []
 	if(domain == "l"):
-		for x in prob:
-			m.append(x)
+		m = prob
 	if(domain == "p"):
 		for x in prob:
 			m.append(math.log((1-x)/x))
@@ -200,9 +198,23 @@ def calculate_LDPC_LLR(LDPC, prob, base=10, option="d", domain="p", damp="1"): #
 				#print(messageOut)
 
 			#2 Calculate outgoing messages towards edges
-				FG.calculateMessageParity(LDPC.check[i])
-		
-	#4 See if the probabilities of outgoing messages have changed (significantly)
+				match checkType:
+					case "default" :
+						FG.calculateMessageParity(LDPC.check[i])
+					case "gallager":
+						FG.calculateMessageGallager(LDPC.check[i])
+					case "min-sum":
+						FG.calculateMessageMinSum(LDPC.check[i])
+					case "attenuated":
+						FG.calculateMessageMinSumAttenuated(LDPC.check[i], constant)
+					case "offset":
+						FG.calculateMessageMinSumOffset(LDPC.check[i], constant)
+					case _:
+						FG.calculateMessageParity(LDPC.check[i])
+				#FG.calculateMessageMinSumAttenuated(LDPC.check[i], 0.5)
+	
+	
+	'''#4 See if the probabilities of outgoing messages have changed (significantly)
 		if (option == "e"): #Encoding option is called, outgoing messages to c are needed
 			for i, obj in enumerate(LDPC.C):
 				x  = LDPC.equality[i].messagesLLR[LDPC.equality[i].edgeNames.index(LDPC.C[i].name), 0]
@@ -222,7 +234,7 @@ def calculate_LDPC_LLR(LDPC, prob, base=10, option="d", domain="p", damp="1"): #
 		
 			
 		if (boolean):
-			break'''
+			break;'''
 	
 	
 	
