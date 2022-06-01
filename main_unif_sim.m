@@ -1,13 +1,13 @@
 clear, clc
 
-CodeRate = 1/2; % can be 1/2, 2/3, 3/4 or 5/6
+CodeRate = 5/6; % can be 1/2, 2/3, 3/4 or 5/6
 Mqam = 16;  % can be 4, 16, 64 for '802-11'
     Mask = sqrt(Mqam);
 Ncoded = 648;  % can be 648, 1299, 1944
     Ninfo = CodeRate*Ncoded;
     
 % Simulation Parameters
-SNRdB     = 1:10;
+SNRdB     = 1:8;
     lenSNR    = length(SNRdB);
 SNR       = 10.^(SNRdB/10);
 Nsims = 1;
@@ -23,9 +23,9 @@ Hldpc      = WL11_LDPCmatrix(CodeRate,Ncoded);
 Hsprs      = sparse(Hldpc);
 LDPCENC = comm.LDPCEncoder('ParityCheckMatrix',Hsprs);
 try
-    LDPCDEC = comm.gpu.LDPCDecoder('ParityCheckMatrix',Hsprs,'MaximumIterationCount',50);
+    LDPCDEC = comm.gpu.LDPCDecoder('ParityCheckMatrix',Hsprs,'MaximumIterationCount',20);
 catch
-    LDPCDEC = comm.LDPCDecoder('ParityCheckMatrix',Hsprs,'MaximumIterationCount',50);
+    LDPCDEC = comm.LDPCDecoder('ParityCheckMatrix',Hsprs,'MaximumIterationCount',20);
 end
 Data = randi([0 1],Ninfo,1);
 Coded = LDPCENC(Data);
@@ -37,7 +37,7 @@ AvgEstSNR = zeros(lenSNR,Nsims);
 
 ProbBerrPy = zeros(lenSNR, Nsims);
 ProbFerrPy = zeros(lenSNR, Nsims);
-
+%decodercfg = lpdcDecoderConfig(Hsprs, 'norm-min-sum')
 %%
 % Transmit message with different SNR
 for iSNR = 1:lenSNR
@@ -98,7 +98,7 @@ end
 %%
 % if SNRdB and 10*log10(mean(AvgEstSNR,2)) do not agree, you're doing
 % something wrong
-figure(99);
+figure(98);
 grid on; hold on;
 errorbar(SNRdB,mean(ProbBerr,2),std(ProbBerr,0,2),'blue-','linewidth',1);
 errorbar(SNRdB,mean(ProbFerr,2),std(ProbFerr,0,2),'red-','linewidth',1);

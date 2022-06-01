@@ -9,9 +9,9 @@ class Node():
 		else:
 			self.name = nodeName
 		self.edges = []
-		self.messages = np.empty((0, 2))
+		#self.messages = np.empty((0, 2))
 		self.messagesLLR = np.empty((0, 1))
-		self.function = "Empty"
+		#self.function = "Empty"
 		self.edgeNames = []
 		
 	def addEdge(self, edge):
@@ -20,7 +20,7 @@ class Node():
 		else:
 			self.edges.append(edge)
 			self.edgeNames.append(edge.name)
-			self.messages = np.concatenate((self.messages, -1 * np.ones((1, edge.nSymbols))))
+			#self.messages = np.concatenate((self.messages, -1 * np.ones((1, edge.nSymbols))))
 			self.messagesLLR = np.concatenate((self.messagesLLR, float("NaN")*np.ones((1, 1))))
 			
 	def printEdges(self):

@@ -2,7 +2,7 @@ import Factor_Graph as FG
 import numpy as np
 import random
 import math
-
+from time import time
 class LDPC_Code():
 	def __init__(self, b, c, B, C, inp, out, check, equality):
 		self.B = B
@@ -13,7 +13,7 @@ class LDPC_Code():
 		self.equality = equality
 		self.c = c
 		self.b = b
-	def reset(self):
+	'''def reset(self):
 		for i, x in enumerate(self.B):
 			for j, y in enumerate(self.B[i].messages):
 				self.B[i].messages[j] *= -100 
@@ -26,7 +26,11 @@ class LDPC_Code():
 				
 		for i, x in enumerate(self.check):
 			for j, y in enumerate(self.check[i].messages):
-				self.check[i].messages[j] *= -100 
+				self.check[i].messages[j] *= -100 '''
+
+def step_time(start):
+	print(time() - start)
+	return time()
 
 def flip_bit(code, n=1):
 	temp = []
@@ -94,6 +98,7 @@ def LDPC_parity(k, n, j=3):
 	return matrix
 	
 def generate_LDPC(parity):
+	start = time()
 	#Create necessary nodes and edges
 	b = parity.shape[1]-parity.shape[0]
 	c = parity.shape[1]
@@ -105,6 +110,8 @@ def generate_LDPC(parity):
 	check = FG.createNodes(c-b, nodeName="+")
 	out = FG.createNodes(b, nodeName="b")
 	inp = FG.createNodes(c, nodeName="c")
+	start = step_time(start)
+	print("Nodes and edges created")
 	
 	#attach edges and nodes to eachother
 	for i, obj in enumerate(C):
@@ -118,28 +125,28 @@ def generate_LDPC(parity):
 		out[i].createFunction(np.array([0.5, 0.5]))
 		out[i].messagesLLR[out[i].edgeNames.index(B[i].name)] = 0
 
+	start = step_time(start)
+	print("Bit and equality nodes implemented")
 	interconnect = FG.createEdges(int(np.sum(parity)))
 	
 	rows = parity.shape[0]
 	columns = parity.shape[1]
 	a = 0
-		
 	for i in range(rows):
 		for j in range(columns):
 			if (parity[i, j] == 1): #Connect equality node with parity check
 				interconnect[a].addNode(check[i])
 				interconnect[a].addNode(equality[j])
 				a += 1
-	
+	start = step_time(start)
+	print("Inter connection edges created and appended")
 	#Adding functions to check and equality nodes
-	for i in range(rows):
+	'''for i in range(rows):
 		check[i].createFunction(nodeType="+")
-
-
 	for i in range(columns):
 		equality[i].createFunction(nodeType="=")
-	
-	
+	start = step_time(start)
+	print("Functions created")'''
 	LDPC = LDPC_Code(b, c, B, C, inp, out, check, equality)
 	
 	return LDPC
@@ -149,6 +156,7 @@ def calculate_LDPC_LLR(LDPC, prob, base=10, option="d", domain="p", checkType="d
 	#0 Initialize probabilities
 		#1 Transform to log likelyhood domain
 	m = []
+	start = time()
 	if(domain == "l"):
 		m = prob
 	if(domain == "p"):
@@ -171,12 +179,12 @@ def calculate_LDPC_LLR(LDPC, prob, base=10, option="d", domain="p", checkType="d
 			quit()
 		for i  in (range(LDPC.c)): #Set incoming messages
 			LDPC.inp[i].messagesLLR[LDPC.inp[i].edgeNames.index(LDPC.C[i].name)] = m[i]
-	
+	start = step_time(start)
 	#1 Set messages outgoing messages from checknodes to [0.5,0.5] in LLR = 0
 	for i, obj in enumerate(LDPC.check):
 		for j, x in enumerate(LDPC.check[i].messagesLLR):
 			LDPC.check[i].messagesLLR[j] = np.array(0)
-	
+	start = step_time(start)
 	for k in range(20):
 	#2 Calculate upward Messages
 		a = 0
@@ -198,6 +206,7 @@ def calculate_LDPC_LLR(LDPC, prob, base=10, option="d", domain="p", checkType="d
 				#print(messageOut)
 
 			#2 Calculate outgoing messages towards edges
+				start = time()
 				match checkType:
 					case "default" :
 						FG.calculateMessageParity(LDPC.check[i])
@@ -212,7 +221,7 @@ def calculate_LDPC_LLR(LDPC, prob, base=10, option="d", domain="p", checkType="d
 					case _:
 						FG.calculateMessageParity(LDPC.check[i])
 				#FG.calculateMessageMinSumAttenuated(LDPC.check[i], 0.5)
-	
+				#print(LDPC.b, time()-start)
 	
 	'''#4 See if the probabilities of outgoing messages have changed (significantly)
 		if (option == "e"): #Encoding option is called, outgoing messages to c are needed
