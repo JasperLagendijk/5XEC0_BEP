@@ -4,8 +4,10 @@ clc, clear all, close all
 fname1 = ["1_2_code_rate.csv", "2_3_code_rate.csv",  "3_4_code_rate.csv", "5_6_code_rate.csv"];
 fname2 = ["attenuated_1_2.csv", "attenuated_2_3.csv", "attenuated_3_4.csv"];
 SNRdB = 1:8;  
+Indexer = [0.001, 0.01, 0.03, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
+
 M = zeros(length(fname1),length(SNRdB), 5);
-N = zeros(length(fname2), length(SNRdB), 10);
+N = zeros(length(fname2), length(SNRdB), length(Indexer));
 
 
 %% Load data 
@@ -32,7 +34,7 @@ end
 for name = 1:length(fname2)
     [Type, Berr, EncR, SNR, factor] =  csvimport( convertStringsToChars(fname2(name)), 'columns', {'Type', 'Bit Error Rate', 'CodeRate', 'SNR', 'factor'} );
    for i = 1:length(Berr)
-        N(name, SNR(i), 10*factor(i)) = Berr(i);
+        N(name, SNR(i), find(Indexer==factor(i))) = Berr(i);
    end
 end
 
