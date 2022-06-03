@@ -9,9 +9,7 @@ class Node():
 		else:
 			self.name = nodeName
 		self.edges = []
-		#self.messages = np.empty((0, 2))
 		self.messagesLLR = np.empty((0, 1))
-		#self.function = "Empty"
 		self.edgeNames = []
 		
 	def addEdge(self, edge):
@@ -20,42 +18,11 @@ class Node():
 		else:
 			self.edges.append(edge)
 			self.edgeNames.append(edge.name)
-			#self.messages = np.concatenate((self.messages, -1 * np.ones((1, edge.nSymbols))))
 			self.messagesLLR = np.concatenate((self.messagesLLR, float("NaN")*np.ones((1, 1))))
 			
 	def printEdges(self):
 		for obj in self.edges:
-			print("Edge: ", obj.name, "Message: ", self.messages[self.edgeNames.index(obj.name)])
-
-	def printEdgesLLR(self):
-		for obj in self.edges:
 			print("Edge: ", obj.name, "Message: ", self.messagesLLR[self.edgeNames.index(obj.name)])
-		
-		
-	def createFunction(self, probArray=np.zeros([2,2]), nodeType="f"): #Not finished -> just for now
-		if (nodeType == "f"): #Regular function, array given directly
-			self.function = probArray
-		
-		elif (nodeType == "+"): #Parity-Check node
-			l = list([])
-			for obj in self.edges:
-				l.append(obj.nSymbols)
-			tempArray = np.zeros(np.product(l))
-			for i, x in enumerate(tempArray):
-				if ((bin(i).count("1") % 2)):
-					tempArray[i] = 1	
-			self.function = tempArray.reshape(tuple(l))
-		
-		elif (nodeType == "="): #Equality node
-			l = list([])
-			for obj in self.edges:
-				l.append(obj.nSymbols)
-			tempArray = np.zeros(np.product(l))
-			tempArray[0] = 1
-			tempArray[-1] = 1
-			self.function = tempArray.reshape(tuple(l))
-
-
 	
 class Edge():
 	def __init__(self, edgeNumber=0, nSymbols=2, edgeName="X"):
@@ -66,7 +33,6 @@ class Edge():
 		else:
 			self.name = edgeName
 		self.nodes = []
-		self.messages = np.empty((0, nSymbols))
 		self.messagesLLR = np.empty((0, 1))
 		self.nodeNames = []
 		
@@ -76,15 +42,9 @@ class Edge():
 		else:
 			self.nodes.append(node)
 			self.nodeNames.append(node.name)
-			self.messages = np.concatenate((self.messages, -1 * np.ones((1, self.nSymbols))))
 			self.messagesLLR = np.concatenate((self.messagesLLR, float("NaN")*np.ones((1, 1))))
 			node.addEdge(self)
-
-	
-	def printNodes(self):
-		for obj in self.nodes:
-			print("Node: ", obj.name, "Message: ", self.messages[self.nodeNames.index(obj.name)])
-	
+			
 	def printNodes(self):
 		for obj in self.nodes:
 			print("Node: ", obj.name, "Message: ", self.messagesLLR[self.nodeNames.index(obj.name)])
@@ -136,28 +96,6 @@ def jacobian(L):
 	
 def f_check(x, y):
 	return jacobian([x, y]) - jacobian([0, x+y])
-
-
-
-def calculateMessageProb(sender, outgoing):
-	tempOut = sender.function.copy()
-	for incoming in sender.edges: #Loop through all incoming messages, multiply all messages with outgoing function
-		if (incoming != outgoing): 
-			tempMessage = incoming.messages[incoming.nodeNames.index(sender.name)]
-			#print("Message going to:", sender.name, "from:", incoming.name, ":", tempMessage)
-			a =  [1] *len(sender.function.shape)
-			a[sender.edgeNames.index(incoming.name)] = -1
-			tempOut *= tempMessage.reshape(tuple(a))
-			
-	tempTup = list(range( len(sender.function.shape)))
-	tempTup.pop(sender.edgeNames.index(outgoing.name))
-	messageOut = np.sum(tempOut, tuple(tempTup))	
-	#Normalize messages:
-	if (np.sum(messageOut) > 0):
-		messageOut = messageOut/(np.sum(messageOut))
-	#print("Outgoing message from:", sender.name, "to:", outgoing.name,":", messageOut)
-	return messageOut
-
 
 def calculateMessageParity(sender):
 	if (len(sender.edges) == 1): #No parity checking needed
@@ -316,36 +254,3 @@ def generateMessage(sender, recip): #Generates message from acyclic, forest fact
 		return
 	else:
 		print("ERROR: Incorrect input")
-
-
-def findMessage(sender, recip, l=[]):
-	if (isinstance(sender, Edge)):
-		if (np.sum(sender.messages[sender.nodeNames.index(recip.name)]) < 0): #No new message present, generate new message
-			generateMessage(sender, recip)
-			
-		if 	(len(sender.messages.shape) > 1):
-			return sender.messages[sender.nodeNames.index(recip.name)]
-		else:
-			return sender.messages
-	elif (isinstance(sender, Node)):
-		if (np.sum(sender.messages[sender.edgeNames.index(recip.name)]) < 0): #No message present, generate new message
-			generateMessage(sender, recip)
-		if 	(len(sender.messages.shape) > 1):
-			return sender.messages[sender.edgeNames.index(recip.name)]
-		else:
-			return sender.messages
-		
-	else:
-		print("ERROR: Incorrect input")
-
-
-def findMarginal(edge, node):
-	a = findMessage(edge, node)
-	b = findMessage(node, edge)
-	if (np.sum(a*b) > 0):
-		marginal = np.divide(a*b, np.sum(a*b))
-	else:
-		marginal = a*b
-	return marginal
-
-

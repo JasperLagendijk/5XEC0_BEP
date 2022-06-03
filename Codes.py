@@ -28,10 +28,6 @@ class LDPC_Code():
 			for j, y in enumerate(self.check[i].messages):
 				self.check[i].messages[j] *= -100 '''
 
-def step_time(start):
-	print(time() - start)
-	return time()
-
 def flip_bit(code, n=1):
 	temp = []
 	i = 0
@@ -110,23 +106,17 @@ def generate_LDPC(parity):
 	check = FG.createNodes(c-b, nodeName="+")
 	out = FG.createNodes(b, nodeName="b")
 	inp = FG.createNodes(c, nodeName="c")
-	start = step_time(start)
-	print("Nodes and edges created")
 	
 	#attach edges and nodes to eachother
 	for i, obj in enumerate(C):
 		C[i].addNode(equality[i])
 		C[i].addNode(inp[i])
-		inp[i].createFunction(np.array([0.5, 0.5]))
 		inp[i].messagesLLR[inp[i].edgeNames.index(C[i].name)] = 0
 	for i in range(b):
 		B[i].addNode(equality[i])
 		B[i].addNode(out[i])
-		out[i].createFunction(np.array([0.5, 0.5]))
 		out[i].messagesLLR[out[i].edgeNames.index(B[i].name)] = 0
 
-	start = step_time(start)
-	print("Bit and equality nodes implemented")
 	interconnect = FG.createEdges(int(np.sum(parity)))
 	
 	rows = parity.shape[0]
@@ -138,15 +128,6 @@ def generate_LDPC(parity):
 				interconnect[a].addNode(check[i])
 				interconnect[a].addNode(equality[j])
 				a += 1
-	start = step_time(start)
-	print("Inter connection edges created and appended")
-	#Adding functions to check and equality nodes
-	'''for i in range(rows):
-		check[i].createFunction(nodeType="+")
-	for i in range(columns):
-		equality[i].createFunction(nodeType="=")
-	start = step_time(start)
-	print("Functions created")'''
 	LDPC = LDPC_Code(b, c, B, C, inp, out, check, equality)
 	
 	return LDPC
@@ -179,13 +160,12 @@ def calculate_LDPC_LLR(LDPC, prob, base=10, option="d", domain="p", checkType="d
 			quit()
 		for i  in (range(LDPC.c)): #Set incoming messages
 			LDPC.inp[i].messagesLLR[LDPC.inp[i].edgeNames.index(LDPC.C[i].name)] = m[i]
-	start = step_time(start)
 	#1 Set messages outgoing messages from checknodes to [0.5,0.5] in LLR = 0
 	for i, obj in enumerate(LDPC.check):
 		for j, x in enumerate(LDPC.check[i].messagesLLR):
 			LDPC.check[i].messagesLLR[j] = np.array(0)
-	start = step_time(start)
 	for k in range(20):
+		
 	#2 Calculate upward Messages
 		a = 0
 		boolean = True
@@ -220,33 +200,7 @@ def calculate_LDPC_LLR(LDPC, prob, base=10, option="d", domain="p", checkType="d
 						FG.calculateMessageMinSumOffset(LDPC.check[i], constant)
 					case _:
 						FG.calculateMessageParity(LDPC.check[i])
-				#FG.calculateMessageMinSumAttenuated(LDPC.check[i], 0.5)
-				#print(LDPC.b, time()-start)
-	
-	'''#4 See if the probabilities of outgoing messages have changed (significantly)
-		if (option == "e"): #Encoding option is called, outgoing messages to c are needed
-			for i, obj in enumerate(LDPC.C):
-				x  = LDPC.equality[i].messagesLLR[LDPC.equality[i].edgeNames.index(LDPC.C[i].name), 0]
-				if (abs(prevMessages[i]-x) > MAX_ACC):
-					boolean = False
-				prevMessages[i] = x
-				LDPC.equality[i].messagesLLR[LDPC.equality[i].edgeNames.index(LDPC.C[i].name), 0]
-			
-		if (option == "d"): #Decoding option is called, outgoing messages to b are needed
-			for i, obj in enumerate(LDPC.B):
-				x  = LDPC.equality[i].messagesLLR[LDPC.equality[i].edgeNames.index(LDPC.B[i].name), 0]
-				if (abs(prevMessages[i]-x) > MAX_ACC):
-					boolean = False
-				prevMessages[i] = x
-		
-		
-		
-			
-		if (boolean):
-			break;'''
-	
-	
-	
+						
 	#5 After looping calculate outgoing messages 
 	LLR = []
 	finalMessage = []
@@ -273,112 +227,4 @@ def calculate_LDPC_LLR(LDPC, prob, base=10, option="d", domain="p", checkType="d
 				finalMessage.append(0)
 		
 	return finalMessage, LLR	
-	
-	
 
-def calculate_LDPC_prob(LDPC, prob, base=10, option="d", domain="p"): #Decoding/encoding LDPC code:
-	MAX_ACC = 0.001
-	#0 Initialize probabilities
-		#1 Transform to probability domain
-	m = []
-	if(domain == "l"):
-		for p in prob:
-			x = pow(base, p)
-			y = 1/(x+1)
-			a = 1-y
-			m.append(np.array([a, y]))
-	if(domain == "p"):
-		for a in prob:
-			m.append(np.array([a, 1-a]))	
-							
-	if (option == "e"): #Encoding option is chosen, probabilities for incoming bit are enabled
-		prevMessages = np.zeros(LDPC.c)
-		if(len(m) != LDPC.b): #Not enough bits in the codeword -> End program
-			print("ERROR: Incorrect codeword length")
-			quit()
-		for i  in (range(LDPC.b)): #Set incomming messages
-			LDPC.out[i].createFunction(m[i])
-			
-			
-	if (option == "d"):	#Decoding option is chosen, probabilities for outgoing bits are enabled
-		prevMessages = np.zeros(LDPC.b)
-		if(len(m) != LDPC.c): #Not enough bits in the codeword -> End program
-			print("ERROR: Incorrect codeword length:", len(m))	
-			quit()
-		for i  in (range(LDPC.c)): #Set incomming messages
-			LDPC.inp[i].createFunction(m[i])
-	
-	#1 Set messages outgoing messages from checknodes to [0.5,0.5]
-	for i, obj in enumerate(LDPC.check):
-		for j, x in enumerate(LDPC.check[i].messages):
-			LDPC.check[i].messages[j] = np.array([0.5, 0.5])
-	
-	for k in range(100):
-	#2 Calculate upward Messages
-		a = 0
-		boolean = True
-		#1 Calculate outgoing messages from equality nodes into interconnect
-		for i, x in enumerate(LDPC.equality):
-			#1 Take incoming message from interconnect
-			for j, obj in enumerate(LDPC.equality[i].edges):
-				LDPC.equality[i].edges[j].messages[obj.nodeNames.index(LDPC.equality[i].name)] = obj.nodes[not obj.nodeNames.index(LDPC.equality[i].name)].messages[obj.nodes[not obj.nodeNames.index(LDPC.equality[i].name)].edgeNames.index(obj.name)]
-				
-			#2 Take incoming messages from C and B
-			FG.generateMessage(LDPC.C[i], LDPC.equality[i])
-			
-			if(i < LDPC.c-LDPC.b):
-				FG.generateMessage(LDPC.B[i], LDPC.equality[i])
-
-			#3 Calculate outgoing messages towards edges
-			for outgoing in LDPC.equality[i].edges: #For each outgoing message
-				messageOut = FG.calculateMessageProb(LDPC.equality[i], outgoing)
-				
-				LDPC.equality[i].messages[LDPC.equality[i].edgeNames.index(outgoing.name)] = messageOut	
-
-	#3 Calculate downward Messages
-		for i, x in enumerate(LDPC.check):
-			#1 Take incomming messages from interconnect
-			for j, obj in enumerate(LDPC.check[i].edges):
-				LDPC.check[i].edges[j].messages[obj.nodeNames.index(LDPC.check[i].name)] = obj.nodes[not obj.nodeNames.index(LDPC.check[i].name)].messages[obj.nodes[not obj.nodeNames.index(LDPC.check[i].name)].edgeNames.index(obj.name)]
-				
-			#2 Calculate outgoing messages towards edges
-			for outgoing in LDPC.check[i].edges: #For each outgoing message
-				messageOut = FG.calculateMessageProb(LDPC.check[i], outgoing)
-				LDPC.check[i].messages[LDPC.check[i].edgeNames.index(outgoing.name)] = messageOut	
-	
-	#4 See if the probabilities of outgoing messages have changed (significantly)
-		if (option == "e"): #Encoding option is called, outgoing messages to c are needed
-			for i, obj in enumerate(LDPC.C):
-				x  = LDPC.equality[i].messages[LDPC.equality[i].edgeNames.index(LDPC.C[i].name), 0]
-				if (abs(prevMessages[i]-x) > MAX_ACC):
-					boolean = False
-				prevMessages[i] = x
-			
-		if (option == "d"): #Decoding option is called, outgoing messages to b are needed
-			for i, obj in enumerate(LDPC.B):
-				x  = LDPC.equality[i].messages[LDPC.equality[i].edgeNames.index(LDPC.B[i].name), 0]
-				if (abs(prevMessages[i]-x) > MAX_ACC):
-					boolean = False
-				prevMessages[i] = x
-			
-		if (boolean):
-			pass#break
-		#print("Iteration:", k)
-	#5 After looping calculate outoing messages 
-	temp = []
-	finalMessage = []
-	if (option == "e"):
-		for i, obj in enumerate(LDPC.C):
-			temp.append(FG.findMarginal(LDPC.C[i], LDPC.inp[i]))
-		#print(temp)
-		for obj in temp:
-			finalMessage.append(np.argmax(obj))
-		
-	if (option == "d"):
-		for i, obj in enumerate(LDPC.B):
-			temp.append(FG.findMarginal(LDPC.B[i], LDPC.out[i]))			
-	
-		for obj in temp:
-			finalMessage.append(np.argmax(obj))
-		
-	return finalMessage, temp

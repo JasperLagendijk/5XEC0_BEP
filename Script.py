@@ -12,10 +12,10 @@ def decode_LDPC(parity, data, control, checkType, proc_num, return_dict, SNR, fa
 	#Create LDPC framework
 	start = time.time()
 	LDPC = Codes.generate_LDPC(parity)
-	print("Test", time.time()-start)
+	print("LPDC Object created:", time.time()-start)
 	n_BE = []
 	#Decode data
-	for i in range(1):
+	for i in range(100):
 		message, prob = Codes.calculate_LDPC_LLR(LDPC, data[0:999, i], base=10, option="d", domain="l", checkType=checkType, constant=factor)
 		n_BE.append(np.sum(abs(message - control[0:999, i])))
 		
@@ -24,7 +24,7 @@ def decode_LDPC(parity, data, control, checkType, proc_num, return_dict, SNR, fa
 	print("The thread for SNR value of", SNR, "and attenuation factor", factor, "took", time.time()-start, "seconds")
 	return [checkType, BER, len(control[0:999, 0]), SNR]
 
-fname = ["datasets/dataSet_0.50_1.mat", "datasets/dataSet_0.67_1.mat", "datasets/dataSet_0.75_1.mat", "datasets/dataSet_0.83_1.mat"]#, "datasets/dataSet_0.83_2.mat", "datasets/dataSet_0.83_3.mat", "datasets/dataSet_0.83_4.mat", "datasets/dataSet_0.83_5.mat", "datasets/dataSet_0.83_6.mat", "datasets/dataSet_0.83_7.mat", "datasets/dataSet_0.83_8.mat", ]#["datasets/dataSet_0.67_1.mat", "datasets/dataSet_0.67_2.mat", "datasets/dataSet_0.67_3.mat", "datasets/dataSet_0.67_4.mat", "datasets/dataSet_0.67_5.mat", "datasets/dataSet_0.67_6.mat", "datasets/dataSet_0.67_7.mat", "datasets/dataSet_0.67_8.mat", "datasets/dataSet_0.75_1.mat", "datasets/dataSet_0.75_2.mat", "datasets/dataSet_0.75_3.mat", "datasets/dataSet_0.75_4.mat", "datasets/dataSet_0.75_5.mat", "datasets/dataSet_0.75_6.mat", "datasets/dataSet_0.75_7.mat", "datasets/dataSet_0.75_8.mat", "datasets/dataSet_0.83_1.mat", "datasets/dataSet_0.83_2.mat", "datasets/dataSet_0.83_3.mat", "datasets/dataSet_0.83_4.mat", "datasets/dataSet_0.83_5.mat", "datasets/dataSet_0.83_6.mat", "datasets/dataSet_0.83_7.mat", "datasets/dataSet_0.83_8.mat"]
+fname = ["datasets/dataSet_0.50_1.mat", "datasets/dataSet_0.50_2.mat", "datasets/dataSet_0.50_3.mat", "datasets/dataSet_0.50_4.mat", "datasets/dataSet_0.50_5.mat", "datasets/dataSet_0.50_6.mat", "datasets/dataSet_0.50_7.mat", "datasets/dataSet_0.50_8.mat", ]
 
 fields = ["Type", "Bit Error Rate", "CodeRate", "SNR", "factor"]
 
@@ -34,7 +34,7 @@ return_dict = manager.dict()
 jobs = []
 
 version = "attenuated"
-factor = [0.1]#, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+factor = [0.001, 0.01, 0.03, 0.05]
 coderate = ["1/2", "2/3", "3/4", "5/6"]
 bit_rates = []
 
@@ -58,7 +58,7 @@ for j in range(len(fname)):
 	
 print(time.time() - start)
 
-#with open('attenuated_5_6.csv', 'w') as f:
-#	write = csv.writer(f)
-#	write.writerow(fields)
-#	write.writerows(return_dict.values())
+with open('attenuated_1_2_temp.csv', 'w') as f:
+	write = csv.writer(f)
+	write.writerow(fields)
+	write.writerows(return_dict.values())
