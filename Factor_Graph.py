@@ -142,7 +142,7 @@ def calculateMessageGallager(sender):
 			if incoming != outgoing:
 				L.append(incoming.messagesLLR[incoming.nodeNames.index(sender.name)])
 		L = np.array(L)
-		sender.messagesLLR[sender.edgeNames.index(outgoing.name)] =  2*np.arctanh(np.prod(np.tanh(0.5*L)))
+		sender.messagesLLR[sender.edgeNames.index(outgoing.name)] =  2*np.arctanh(np.clip(np.prod(np.tanh(0.5*L)), -0.999, 0.999))
 	
 def calculateMessageMinSum(sender):
 	for outgoing in sender.edges:

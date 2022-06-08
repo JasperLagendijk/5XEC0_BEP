@@ -1,12 +1,12 @@
 %% Initial settings
 clc, clear all, close all
 % Extract data from CSV file0
-fname1 = ["1_2_code_rate.csv", "2_3_code_rate.csv",  "3_4_code_rate.csv", "5_6_code_rate.csv"];
-fname2 = ["attenuated_1_2.csv", "attenuated_2_3.csv", "attenuated_3_4.csv"];
-SNRdB = 1:8;  
-Indexer = [0.001, 0.01, 0.03, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
+fname1 = ["coderate_1_2_temp.csv", "2_3_code_rate.csv",  "3_4_code_rate.csv", "5_6_code_rate.csv"];
+fname2 = ["attenuated_1_2.csv"]%, "attenuated_2_3.csv", "attenuated_3_4.csv"];
+SNRdB = 1:40;  
+Indexer = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
 
-M = zeros(length(fname1),length(SNRdB), 5);
+M = zeros(length(fname1),length(SNRdB), 4);
 N = zeros(length(fname2), length(SNRdB), length(Indexer));
 
 
@@ -26,7 +26,7 @@ for name = 1:length(fname1)
     %elseif strcmp(x, 'offset')
        %M(name, SNR(i), 4) = Berr(i);
     elseif strcmp(x, 'default')
-        M(name, SNR(i), 5) = Berr(i);
+        M(name, SNR(i), 4) = Berr(i);
     end
     end
 end
@@ -62,8 +62,8 @@ for name = 1:length(fname1)
     plot(squeeze(M(name, :, :)))
     plot(squeeze(ProbBerr(name, :)))
     set(gca,'YScale','log');
-    set(gca, 'ColorOrder',  linspecer(length(squeeze(M(name, 1, :)))));
-    lgd = legend('gallager', 'min-sum', 'attenuated', 'offset', 'checknode', 'matlab');
+    set(gca, 'ColorOrder',  linspecer(1+length(squeeze(M(name, 1, :)))));
+    lgd = legend('gallager', 'min-sum', 'attenuated', 'checknode', 'matlab');
     title(p_name1(name))
     hold off
 end
